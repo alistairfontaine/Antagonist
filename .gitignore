@@ -1,0 +1,20 @@
+# FontaineOS Kernel & Distro Target Binary Assemblies
+bin/*.bin
+bin/*.img
+bin/*.iso
+
+# Freestanding C++ Compiler Intermediate Object Assets
+src/*.o
+backend/*.o
+core/*.o
+
+# Text Engine Local Multi-Weight Caches (Fontana Binaries)
+fontana_weights.bin
+weights_backup/
+*.bin.bin
+
+# Linux Environment Local Temp Backups & User Cache
+.DS_Store
+Thumbs.db
+*.swp
+*~
