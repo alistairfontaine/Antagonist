@@ -1,45 +1,65 @@
 #include <stdint.h>
+#include "vbe.h"
+#include "buffer.h"
+#include "palette.h"
 
 /*
    Antagonist OS Distribution Master Initialization Gateway.
-   This module intercepts execution from the booting FontaineOS micro-kernel core
-   and binds the high-resolution VBE graphics pipelines to your background cognitive processes.
+   Manages the hardware clock overclock and initial graphics context handshakes.
 */
 
-// External hardware wrappers from our underlying core kernel driver frames
-extern "C" {
-    void init_keyboard();
-    void clear_shell_command();
-    uint32_t count_alpha;
+// Low-level port input assembly wrapper
+inline void outb(uint16_t port, uint8_t value) {
+    asm volatile ("outb %0, %1" : : "a"(value), "Nd"(port));
 }
 
-// Global distribution coordinate tracking states
-static uint32_t distro_runtime_ticks = 0;
+/*
+   The Host Interrupt Clock Overclock Pass (Phase F).
+   Accelerates the Programmable Interval Timer (PIT) frequency to exactly 1000Hz.
+   Divisor Calculation: 1193182 Hz (Internal Oscillator) / 1000 Target Hz = 1193.
+*/
+static void init_pit_overclock() {
+    uint16_t divisor = 1193;
+
+    // Send Command Byte 0x36 to Port 0x43: Select Channel 0, Square Wave Mode, Load LSB then MSB
+    outb(0x43, 0x36);
+
+    // Send the Low 8 bits of the divisor payload to Channel 0 Data Port 0x40
+    outb(0x40, (uint8_t)(divisor & 0xFF));
+
+    // Send the High 8 bits of the divisor payload to Channel 0 Data Port 0x40
+    outb(0x40, (uint8_t)((divisor >> 8) & 0xFF));
+}
+
+// External hardware states living within our adjacent FontaineOS kernel
+extern "C" {
+    void init_keyboard();
+}
 
 /*
    Master Distro Boot Loop.
    Executed immediately after the micro-kernel initializes the GDT, IDT, and paging segments.
 */
 extern "C" void antagonist_main() {
-    // 1. Flush any leftover SeaBIOS/MBR text data remnants out of screen memory boundaries
-    volatile char* video_memory = (volatile char*)0xB8000;
-    for (int i = 0; i < 4000; i = i + 2) {
-        video_memory[i] = ' ';
-        video_memory[i + 1] = 0x07; // Clear screen to default reset grey
+    // 1. Forcefully accelerate system clock interrupt ticks to 1000Hz (1ms intervals)
+    init_pit_overclock();
+
+    // 2. Wake up the high-resolution VESA VBE 800x600 32-bit Linear Framebuffer
+    init_vbe_graphics();
+
+    // 3. Flood our staging back-buffer with our signature corporate dark slate tone
+    clear_back_buffer(COLOR_DARK_SLATE);
+
+    // 4. Draw a single high-density Gold tracking line across the top border of our canvas
+    for (uint32_t x = 0; x < SCREEN_WIDTH; x++) {
+        put_pixel_buffer(x, 10, COLOR_GOLD);
     }
 
-    // 2. Render our high-density distribution signature branding labels
-    const char* boot_banner = "⚡ ANTAGONIST OS BARE-METAL DISTRIBUTION PLATFORM LIVE ⚡";
-    int i = 0;
-    while (boot_banner[i] != '\0') {
-        video_memory[0 + (i * 2)] = boot_banner[i];
-        video_memory[0 + (i * 2) + 1] = 0x0E; // Brilliant Gold highlight styling on Row 1
-        i++;
-    }
+    // 5. Blast the rendered staging canvas straight onto the physical display panel
+    swap_graphics_buffers();
 
-    // 3. Keep execution alive in a stable low-power standby trap loop until scheduling loops ignite
+    // 6. Enter our infinite standby execution trap line
     while (true) {
-        distro_runtime_ticks++;
         asm volatile("hlt");
     }
 }
