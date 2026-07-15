@@ -82,9 +82,9 @@ src/font.o: src/font.cpp
 src/persistence.o: src/persistence.cpp
 	$(CC) $(CFLAGS) src/persistence.cpp -o src/persistence.o
 
-# Run Target: Mounts the raw multi-drive image to QEMU's primary master IDE bus lines
+# Run Target: Forcefully wakes up an external high-resolution window interface frame!
 run: bin/antagonist.bin bin/disk.img
-	qemu-system-i386 -kernel bin/antagonist.bin -drive file=bin/disk.img,format=raw,index=0,media=disk
+	qemu-system-i386 -kernel bin/antagonist.bin -drive file=bin/disk.img,format=raw,index=0,media=disk -vga std -display sdl
 
 clean:
 	rm -f src/*.o bin/*.bin bin/disk.img
