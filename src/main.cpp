@@ -2,12 +2,13 @@
 #include "vbe.h"
 #include "buffer.h"
 #include "font.h"
-#include "threads.h"
+#include "raycast.h"
+#include "particle.h"
 
 /*
    Antagonist OS Distribution Master Initialization Gateway.
-   Orchestrates core hardware clocks, multi-thread allocation states,
-   telemetry profiler overlays, and drives the system shutdown gateways.
+   Orchestrates core hardware clocks, renders 3D software voxel spaces,
+   and draws real-time performance profiler graphics on a unified master thread.
 */
 
 // Master 32-Bit Hexadecimal True Color Constant Index
@@ -25,7 +26,6 @@ inline void outb(uint16_t port, uint8_t value) {
 
 /*
    The Host Interrupt Clock Overclock Pass (Phase F).
-   Accelerates the Programmable Interval Timer (PIT) frequency to exactly 1000Hz.
 */
 static void init_pit_overclock() {
     uint16_t divisor = 1193;
@@ -45,7 +45,7 @@ static void uint_to_string_freestanding(uint32_t value, char* dest_buffer) {
         return;
     }
 
-    char staging[16]; // Explicitly sized matrix array boundary protection
+    char staging[16];
     int s_idx = 0;
     while (value > 0 && s_idx < 15) {
         staging[s_idx++] = '0' + (value % 10);
@@ -62,13 +62,13 @@ static void uint_to_string_freestanding(uint32_t value, char* dest_buffer) {
    The Real-Time System Performance Profiler Interface Overlay (Phase X).
 */
 static void render_performance_profiler(uint32_t active_ticks) {
-    char tick_str_buffer[16]; // Secure localized tracking matrix array container
+    char tick_str_buffer[16];
     uint_to_string_freestanding(active_ticks, tick_str_buffer);
 
     draw_string_gfx(10, 20, "SYS METRICS:", COLOR_CYAN);
     draw_string_gfx(110, 20, "TICKS:", COLOR_WHITE);
     draw_string_gfx(165, 20, tick_str_buffer, COLOR_MINT_GREEN);
-    draw_string_gfx(10, 35, "ACTIVE THREADS: 3", COLOR_WHITE);
+    draw_string_gfx(10, 35, "ACTIVE INDICES: MONOLITHIC", COLOR_WHITE);
 }
 
 /*
@@ -76,10 +76,8 @@ static void render_performance_profiler(uint32_t active_ticks) {
 */
 static void execute_system_shutdown_gateway() {
     clear_back_buffer(COLOR_BLACK);
-
     draw_string_gfx(280, 280, "ANTAGONIST OS DISTRIBUTION POWERED DOWN safely", COLOR_GOLD);
     draw_string_gfx(330, 300, "SYSTEM CORE TERMINATED HALT", COLOR_WHITE);
-
     swap_graphics_buffers();
 
     while (true) {
@@ -87,40 +85,48 @@ static void execute_system_shutdown_gateway() {
     }
 }
 
-// External hardware execution thread entry point anchors
-extern "C" {
-    void display_server_thread_loop();
-    void cognitive_engine_thread_loop();
-}
-
 /*
    Master Distro Boot Loop.
+   Executed immediately after the micro-kernel hooks link over control.
 */
 extern "C" void antagonist_main() {
+    // 1. Initialize the motherboard's underlying timing oscillator registers
     init_pit_overclock();
+
+    // 2. Wake up the high-resolution VESA VBE 800x600 32-bit Linear Framebuffer
     init_vbe_graphics();
-    init_distro_threads();
 
-    create_isolated_thread(1, display_server_thread_loop);
-    create_isolated_thread(2, cognitive_engine_thread_loop);
+    // 3. Setup our fixed-boundary visual tracer ring-buffer pool arrays
+    init_particle_system();
 
-    uint32_t local_supervisor_ticks = 0;
+    uint32_t active_render_ticks = 0;
 
-    // 🔥 FORCE THE CONCURRENCY SCHEDULER WTIHIN KERNEL SPACE TO START INITIALLY!
-    switch_task();
+    // Tracking static vectors to orient our viewport look positions inside the map grid
+    Vec3 virtual_player_position = {4.5f, 4.5f, 0.0f};
+    float virtual_player_angle = 0.0f;
 
+    // 4. Enter our dedicated, high-speed monolithic visual processing matrix loop
     while (true) {
-        local_supervisor_ticks++;
+        active_render_ticks++;
 
-        // Render our real-time telemetry based on the clean local loop tracker
-        render_performance_profiler(local_supervisor_ticks);
+        // A. Flood our staging back-buffer with our signature corporate dark slate tone
+        clear_back_buffer(COLOR_DARK_SLATE);
 
-        // Safe simulation check: trigger shutdown screen smoothly after 15,000 counts
-        if (local_supervisor_ticks >= 15000) {
+        // B. Cast look-vector rays across the 800-pixel canvas to compute our 3D voxel walls
+        render_voxel_world(virtual_player_position, virtual_player_angle);
+
+        // C. Process positions and render all active textured particle tracers
+        update_and_render_particles();
+
+        // D. Rasterize our real-time performance profiler overlay on top of the graphics
+        render_performance_profiler(active_render_ticks);
+
+        // E. Verification hotkey hook checkpoint: trigger our gold gateway halt at 5000 cycles
+        if (active_render_ticks >= 5000) {
             execute_system_shutdown_gateway();
         }
 
-        switch_task();
-        asm volatile("hlt");
+        // F. Forcefully stream the completed 480,000-word RAM canvas out to the video card!
+        swap_graphics_buffers();
     }
 }
