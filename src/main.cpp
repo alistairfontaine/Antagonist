@@ -36,8 +36,6 @@ static void init_pit_overclock() {
 
 /*
    Freestanding Integer-To-ASCII Base 10 Converter.
-   Fixed: Enforced strict 16-byte buffer sizing rules to completely protect
-   multi-digit telemetry strings from triggering stack frame memory overflows.
 */
 static void uint_to_string_freestanding(uint32_t value, char* dest_buffer) {
     int i = 0;
@@ -107,6 +105,9 @@ extern "C" void antagonist_main() {
     create_isolated_thread(2, cognitive_engine_thread_loop);
 
     uint32_t local_supervisor_ticks = 0;
+
+    // 🔥 FORCE THE CONCURRENCY SCHEDULER WTIHIN KERNEL SPACE TO START INITIALLY!
+    switch_task();
 
     while (true) {
         local_supervisor_ticks++;
