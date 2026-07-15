@@ -10,11 +10,11 @@ LDFLAGS = -m elf_i386 -T ../FontaineOS/linker.ld
 
 # Define our destination pathways matching our strict folder tree rules
 KERNEL_OBJS = ../FontaineOS/src/boot.o ../FontaineOS/src/kernel.o ../FontaineOS/src/gdt.o ../FontaineOS/src/idt.o ../FontaineOS/src/timer.o ../FontaineOS/src/keyboard.o ../FontaineOS/src/pmm.o ../FontaineOS/src/vmm.o ../FontaineOS/src/heap.o ../FontaineOS/src/task.o ../FontaineOS/src/ata.o
-DISTRO_OBJS = src/main.o src/vbe.o src/buffer.o src/palette.o
+DISTRO_OBJS = src/main.o src/vbe.o src/buffer.o src/palette.o src/input.o src/math3d.o src/raycast.o src/collision.o src/spatial.o src/selection.o src/particle.o src/modification.o src/tensor.o src/weights.o src/vocab.o src/tokenizer.o src/threads.o src/font.o src/persistence.o
 
 all: bin/antagonist.bin bin/disk.img
 
-# Monolithic Linking Stage: Fuses your kernel core with your graphic layers!
+# Monolithic Linking Stage: Fuses your kernel core with your graphic and cognitive layers!
 bin/antagonist.bin: $(DISTRO_OBJS)
 	mkdir -p bin
 	$(LD) $(LDFLAGS) -o bin/antagonist.bin $(KERNEL_OBJS) $(DISTRO_OBJS)
@@ -36,6 +36,51 @@ src/buffer.o: src/buffer.cpp
 
 src/palette.o: src/palette.cpp
 	$(CC) $(CFLAGS) src/palette.cpp -o src/palette.o
+
+src/input.o: src/input.cpp
+	$(CC) $(CFLAGS) src/input.cpp -o src/input.o
+
+src/math3d.o: src/math3d.cpp
+	$(CC) $(CFLAGS) src/math3d.cpp -o src/math3d.o
+
+src/raycast.o: src/raycast.cpp
+	$(CC) $(CFLAGS) src/raycast.cpp -o src/raycast.o
+
+src/collision.o: src/collision.cpp
+	$(CC) $(CFLAGS) src/collision.cpp -o src/collision.o
+
+src/spatial.o: src/spatial.cpp
+	$(CC) $(CFLAGS) src/spatial.cpp -o src/spatial.o
+
+src/selection.o: src/selection.cpp
+	$(CC) $(CFLAGS) src/selection.cpp -o src/selection.o
+
+src/particle.o: src/particle.cpp
+	$(CC) $(CFLAGS) src/particle.cpp -o src/particle.o
+
+src/modification.o: src/modification.cpp
+	$(CC) $(CFLAGS) src/modification.cpp -o src/modification.o
+
+src/tensor.o: src/tensor.cpp
+	$(CC) $(CFLAGS) src/tensor.cpp -o src/tensor.o
+
+src/weights.o: src/weights.cpp
+	$(CC) $(CFLAGS) src/weights.cpp -o src/weights.o
+
+src/vocab.o: src/vocab.cpp
+	$(CC) $(CFLAGS) src/vocab.cpp -o src/vocab.o
+
+src/tokenizer.o: src/tokenizer.cpp
+	$(CC) $(CFLAGS) src/tokenizer.cpp -o src/tokenizer.o
+
+src/threads.o: src/threads.cpp
+	$(CC) $(CFLAGS) src/threads.cpp -o src/threads.o
+
+src/font.o: src/font.cpp
+	$(CC) $(CFLAGS) src/font.cpp -o src/font.o
+
+src/persistence.o: src/persistence.cpp
+	$(CC) $(CFLAGS) src/persistence.cpp -o src/persistence.o
 
 # Run Target: Mounts the raw multi-drive image to QEMU's primary master IDE bus lines
 run: bin/antagonist.bin bin/disk.img
