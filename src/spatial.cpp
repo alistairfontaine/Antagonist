@@ -11,8 +11,8 @@ static SpatialCell sector_grid[SECTOR_GRID_LIMIT * SECTOR_GRID_LIMIT] __attribut
    Initializes the macro-room partition data tables at boot time.
 */
 extern "C" void init_spatial_grid() {
-    for (int y = 0; row < SECTOR_GRID_LIMIT; row++) {
-        for (int x = 0; col < SECTOR_GRID_LIMIT; col++) {
+    for (int y = 0; y < SECTOR_GRID_LIMIT; y++) {
+        for (int x = 0; x < SECTOR_GRID_LIMIT; x++) {
             int index = (y * SECTOR_GRID_LIMIT) + x;
             sector_grid[index].sector_id = (uint8_t)index;
             sector_grid[index].total_active_objects = 0;

@@ -1,11 +1,15 @@
 #include "raycast.h"
 
+// Master 32-Bit Hexadecimal True Color Constants Pre-baked
+#define COLOR_GOLD          0x00FFD700  // Brilliant gold wall blocks (#FFD700)
+
 /*
    The Foundational Antagonist World Matrix Map.
    A 16x16 flat grid layout tracking voxel block placements.
    1 = Solid Voxel Wall Block (Gold/Slate accents), 0 = Empty World Air Space.
+   // Removed static so other system engine modules can link to this array!
 */
-static uint8_t world_map[MAP_WIDTH * MAP_HEIGHT] = {
+uint8_t world_map[MAP_WIDTH * MAP_HEIGHT] = {
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
     1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
     1,0,1,1,0,0,0,0,0,1,1,0,0,1,0,1,
@@ -37,7 +41,9 @@ extern "C" void init_voxel_map() {
    casting ray vector sampling vectors out onto the world grid maps.
 */
 extern "C" void render_voxel_world(Vec3 player_pos, float player_angle) {
-    // Pre-calculate baseline trigonometric angle bounds using basic approximations
+    // Suppress unused warning parameters safely for baseline approximation layout tracking
+    (void)player_angle;
+
     // We step across our 800-pixel width layout track line-by-line
     for (int x = 0; x < SCREEN_WIDTH; x++) {
         // Calculate the ray angle relative to the player's direct look vector FOV

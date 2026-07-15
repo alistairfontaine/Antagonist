@@ -17,46 +17,47 @@ static Vec3 local_player_position = {4.5f, 4.5f, 0.0f};
 static float local_player_angle = 0.0f;
 
 /*
-   Thread 1: The Monolithic Display Server Execution Loop.
-   Computes 3D voxel transformations and updates visual tracers at maximum frame rates.
+   Expose our core thread loops to true C linkage tracking frames
+   so the linker can bind them straight to our supervisor entrypoint.
 */
-void display_server_thread_loop() {
-    while (true) {
-        // 1. Flood our staging back-buffer with our signature slate background
-        clear_back_buffer(0x001A1E24);
+extern "C" {
 
-        // 2. Render your engine's custom 3D voxel projections onto the canvas
-        render_voxel_world(local_player_position, local_player_angle);
+    void display_server_thread_loop() {
+        while (true) {
+            // 1. Flood our staging back-buffer with our signature slate background
+            clear_back_buffer(0x001A1E24);
 
-        // 3. Compute vector movements and physics updates for all active particles
-        update_and_render_particles();
+            // 2. Render your engine's custom 3D voxel projections onto the canvas
+            render_voxel_world(local_player_position, local_player_angle);
 
-        // 4. Flush the complete staging canvas straight out to the physical VGA display panel
-        swap_graphics_buffers();
+            // 3. Compute vector movements and physics updates for all active particles
+            update_and_render_particles();
 
-        // Cooperatively yield execution back to the scheduler to let Thread 2 compute predictions
-        switch_task();
+            // 4. Flush the complete staging canvas straight out to the physical VGA display panel
+            swap_graphics_buffers();
+
+            // Cooperatively yield execution back to the scheduler to let Thread 2 compute predictions
+            switch_task();
+        }
     }
-}
 
-/*
-   Thread 2: The Background Cognitive Network Layer Execution Loop.
-   Evaluates your model weights and runs tensor forward-propagation continuously.
-*/
-void cognitive_engine_thread_loop() {
-    float prediction_probabilities[FONTANA_VOCAB_SIZE] = {0.0f};
+    void cognitive_engine_thread_loop() {
+        float prediction_probabilities[FONTANA_VOCAB_SIZE] = {0.0f};
 
-    while (true) {
-        // 1. Fetch a constant pointer reference tracking your active tokenizer history window
-        const uint32_t* active_context = get_active_context_reference();
+        while (true) {
+            // 1. Fetch a constant pointer reference tracking your active tokenizer history window
+            const uint32_t* active_context = get_active_context_reference();
 
-        // 2. Execute forward propagation matrix math loops directly over the data streams
-        evaluate_tensor_forward(active_context, prediction_probabilities);
+            // 2. Execute forward propagation matrix math loops directly over the data streams
+            evaluate_tensor_forward(active_context, prediction_probabilities);
 
-        // Cooperatively yield execution back to the scheduler to maintain visual frame integrity
-        switch_task();
+            // Cooperatively yield execution back to the scheduler to maintain visual frame integrity
+            switch_task();
+        }
     }
-}
+
+} // End of extern "C" linkage tracking bounds
+
 
 /*
    Initializes the multi-thread pool state parameters at boot time.
