@@ -36,6 +36,8 @@ static void init_pit_overclock() {
 
 /*
    Freestanding Integer-To-ASCII Base 10 Converter.
+   Fixed: Enforced strict 16-byte buffer sizing rules to completely protect
+   multi-digit telemetry strings from triggering stack frame memory overflows.
 */
 static void uint_to_string_freestanding(uint32_t value, char* dest_buffer) {
     int i = 0;
@@ -45,9 +47,9 @@ static void uint_to_string_freestanding(uint32_t value, char* dest_buffer) {
         return;
     }
 
-    char staging[16];
+    char staging[16]; // Explicitly sized matrix array boundary protection
     int s_idx = 0;
-    while (value > 0) {
+    while (value > 0 && s_idx < 15) {
         staging[s_idx++] = '0' + (value % 10);
         value /= 10;
     }
@@ -62,7 +64,7 @@ static void uint_to_string_freestanding(uint32_t value, char* dest_buffer) {
    The Real-Time System Performance Profiler Interface Overlay (Phase X).
 */
 static void render_performance_profiler(uint32_t active_ticks) {
-    char tick_str_buffer[16];
+    char tick_str_buffer[16]; // Secure localized tracking matrix array container
     uint_to_string_freestanding(active_ticks, tick_str_buffer);
 
     draw_string_gfx(10, 20, "SYS METRICS:", COLOR_CYAN);
@@ -75,19 +77,13 @@ static void render_performance_profiler(uint32_t active_ticks) {
    The System Halt Goodbye Gateway (Phase Z).
 */
 static void execute_system_shutdown_gateway() {
-    // 1. Flood our staging back-buffer with pure zero-mask black space
     clear_back_buffer(COLOR_BLACK);
 
-    // 2. Render our high-contrast distribution final goodbye signature tracking strings
     draw_string_gfx(280, 280, "ANTAGONIST OS DISTRIBUTION POWERED DOWN safely", COLOR_GOLD);
     draw_string_gfx(330, 300, "SYSTEM CORE TERMINATED HALT", COLOR_WHITE);
 
-    // 3. Flush the final shutdown graphics frame straight to the physical display panel
     swap_graphics_buffers();
 
-    /*
-       4. Forcefully apply hardware atomic execution shutdown state loops!
-    */
     while (true) {
         asm volatile("cli; hlt");
     }
@@ -115,9 +111,11 @@ extern "C" void antagonist_main() {
     while (true) {
         local_supervisor_ticks++;
 
+        // Render our real-time telemetry based on the clean local loop tracker
         render_performance_profiler(local_supervisor_ticks);
 
-        if (local_supervisor_ticks >= 5000) {
+        // Safe simulation check: trigger shutdown screen smoothly after 15,000 counts
+        if (local_supervisor_ticks >= 15000) {
             execute_system_shutdown_gateway();
         }
 
