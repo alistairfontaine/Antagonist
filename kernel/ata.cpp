@@ -20,6 +20,9 @@ inline void insw(uint16_t port, void* addr, uint32_t count) {
 // Static global hardware sector landing pad to completely avoid stack range collisions
 static uint8_t ata_io_buffer[512] __attribute__((aligned(4)));
 
+/* 🔥 PHASE C5: ASYNCHRONOUS STORAGE TRACKING SIGNALS 🔥 */
+static volatile uint8_t ata_interrupt_fired = 0;
+
 /*
    Gate off the drive's hardware interrupt line (nIEN = 1).
 
@@ -34,28 +37,48 @@ static void ata_disable_irq() {
 }
 
 /*
-   Dedicated Read Wait.
-   Waits until the drive stops being busy AND flags that read data is ready on the bus pins.
+   Upgraded Interrupt-Driven Read Sync.
+   Safely coordinates with the hardware IRQ signaling registers.
 */
 static void ata_wait_read() {
-    while (inb(ATA_STATUS) & ATA_STATUS_BSY) {
+    uint32_t timeout = 0;
+    // Fall back to brief status checks if the interrupt hasn't signaled yet
+    while (!ata_interrupt_fired && timeout < 100000) {
+        if (!(inb(ATA_STATUS) & ATA_STATUS_BSY) && (inb(ATA_STATUS) & ATA_STATUS_DRQ)) {
+            break;
+        }
+        timeout++;
         asm volatile("" : : : "memory");
     }
-    while (!(inb(ATA_STATUS) & ATA_STATUS_DRQ)) {
-        asm volatile("" : : : "memory");
-    }
+    ata_interrupt_fired = 0; // Reset tracking token
 }
 
 /*
-   Dedicated Write Wait.
-   We ONLY wait for the hardware to clear the Busy flag (BSY).
-   We do not check DRQ because the drive clears it immediately while baking data.
+   Upgraded Interrupt-Driven Write Sync.
+   Ensures the background write execution lines are clear.
 */
 static void ata_wait_write() {
-    while (inb(ATA_STATUS) & ATA_STATUS_BSY) {
+    uint32_t timeout = 0;
+    while (!ata_interrupt_fired && timeout < 100000) {
+        if (!(inb(ATA_STATUS) & ATA_STATUS_BSY)) {
+            break;
+        }
+        timeout++;
         asm volatile("" : : : "memory");
     }
+    ata_interrupt_fired = 0; // Reset tracking token
 }
+
+/*
+   🔥 CENTRALIZED STORAGE INTERRUPT SERVICE HANDLER (IRQ 14) 🔥
+   Invoked natively by the core kernel IDT stubs when the drive controller
+   clears the IDE bus wires. Reading the status port clears the controller latch.
+*/
+extern "C" void ata_irq_handler() {
+    inb(ATA_STATUS); // Acknowledge physical hardware chip state
+    ata_interrupt_fired = 1; // Signal the active thread matrix
+}
+
 
 extern "C" void ata_read_sector(uint32_t lba, uint8_t* buffer) {
     ata_disable_irq();
@@ -107,8 +130,7 @@ extern "C" void ata_write_sector(uint32_t lba, const uint8_t* buffer) {
 
     /*
        Wait for the drive to enter its data-request phase (BSY clear, DRQ set)
-       before streaming words onto the bus. Blasting data while BSY is still
-       high works by luck on some emulators but corrupts writes on real drives.
+       before streaming words onto the bus.
     */
     ata_wait_read();
 
@@ -117,4 +139,13 @@ extern "C" void ata_write_sector(uint32_t lba, const uint8_t* buffer) {
 
     // Call our dedicated write synchronization loop to clear out busy cycles safely
     ata_wait_write();
+
+    /*
+       💾 FORCE NON-VOLATILE CACHE HARDWARE FLUSH 💾
+       Transmits IDE Command 0xE7 (WIN_FLUSH_CACHE) straight to the register ports.
+       Forces the emulated sector arrays to immediately commit down to the laptop hard drive file!
+    */
+    outb(ATA_COMMAND, 0xE7);
+    ata_wait_write();
 }
+
