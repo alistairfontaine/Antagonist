@@ -9,8 +9,8 @@ CFLAGS  = -m32 -c -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti -Ii
 LDFLAGS = -m elf_i386 -T ../FontaineOS/linker.ld
 
 # Define our destination pathways matching our strict folder tree rules
-KERNEL_OBJS = ../FontaineOS/src/boot.o ../FontaineOS/src/gdt.o ../FontaineOS/src/idt.o ../FontaineOS/src/timer.o ../FontaineOS/src/keyboard.o ../FontaineOS/src/pmm.o ../FontaineOS/src/vmm.o ../FontaineOS/src/heap.o ../FontaineOS/src/task.o ../FontaineOS/src/ata.o
-DISTRO_OBJS = src/kernel_sandbox.o src/main.o src/vbe.o src/buffer.o src/palette.o src/input.o src/math3d.o src/raycast.o src/collision.o src/spatial.o src/selection.o src/particle.o src/modification.o src/tensor.o src/weights.o src/vocab.o src/tokenizer.o src/threads.o src/font.o src/persistence.o
+KERNEL_OBJS = ../FontaineOS/src/boot.o ../FontaineOS/src/kernel.o ../FontaineOS/src/gdt.o ../FontaineOS/src/idt.o ../FontaineOS/src/timer.o ../FontaineOS/src/keyboard.o ../FontaineOS/src/pmm.o ../FontaineOS/src/vmm.o ../FontaineOS/src/heap.o ../FontaineOS/src/task.o ../FontaineOS/src/ata.o
+DISTRO_OBJS = src/main.o src/vbe.o src/buffer.o src/palette.o src/input.o src/math3d.o src/raycast.o src/collision.o src/spatial.o src/selection.o src/particle.o src/modification.o src/tensor.o src/weights.o src/vocab.o src/tokenizer.o src/threads.o src/font.o src/persistence.o
 
 
 all: bin/antagonist.bin bin/disk.img
