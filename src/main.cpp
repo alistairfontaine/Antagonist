@@ -1,19 +1,38 @@
 #include <stdint.h>
-#include "vbe.h"
-#include "buffer.h"
-#include "font.h"
 
-#define COLOR_DARK_SLATE    0x001A1E24
-#define COLOR_GOLD          0x00FFD700
-#define COLOR_CYAN          0x0000FFFF
-#define COLOR_MINT_GREEN    0x0000FF00
-#define COLOR_WHITE         0x00FFFFFF
-#define COLOR_BLACK         0x00000000
+/*
+   Antagonist OS Distribution Master Initialization Gateway.
+   Direct text-mode video engine. Writes character bytes straight to 0xB8000
+   to completely avoid VGA register clocking failures and black screens.
+*/
 
-inline void outb(uint16_t port, uint8_t value) {
-    asm volatile ("outb %0, %1" : : "a"(value), "Nd"(port));
+// Standard VGA text mode color attribute flags
+#define ATTR_LIGHT_CYAN      0x0B
+#define ATTR_GOLD            0x0E
+#define ATTR_WHITE           0x0F
+#define ATTR_MINT_GREEN      0x0A
+
+/*
+   Lightweight freestanding string printer.
+   Pokes characters and styles directly into the 80x25 text-video memory grid.
+*/
+static void print_string_raw(int row, int col, const char* str, uint8_t attribute) {
+    volatile char* video_memory = (volatile char*)0xB8000;
+    // Calculate the linear memory index tracking slot for the 80-column row grid
+    int index = (row * 80 + col) * 2;
+
+    int i = 0;
+    while (str[i] != '\0') {
+        video_memory[index] = str[i];          // Character byte
+        video_memory[index + 1] = attribute;   // Style color byte
+        index += 2;
+        i++;
+    }
 }
 
+/*
+   Freestanding Integer-To-ASCII Base 10 Converter.
+*/
 static void uint_to_string_freestanding(uint32_t value, char* dest_buffer) {
     int i = 0;
     if (value == 0) {
@@ -33,42 +52,41 @@ static void uint_to_string_freestanding(uint32_t value, char* dest_buffer) {
     dest_buffer[i] = '\0';
 }
 
-static void render_performance_profiler(uint32_t active_ticks) {
-    char tick_str_buffer[16];
-    uint_to_string_freestanding(active_ticks, tick_str_buffer);
-
-    draw_string_gfx(10, 20, "SYS METRICS:", COLOR_CYAN);
-    draw_string_gfx(110, 20, "TICKS:", COLOR_WHITE);
-    draw_string_gfx(165, 20, tick_str_buffer, COLOR_MINT_GREEN);
-    draw_string_gfx(10, 35, "ACTIVE INDICES: MONOLITHIC RUN", COLOR_WHITE);
-}
-
 extern "C" void antagonist_main() {
-    // 1. Initialize the high-resolution VESA VBE 800x600 32-bit graphics hardware
-    init_vbe_graphics();
+    uint32_t live_distro_ticks = 0;
+    char tick_string[16];
 
-    uint32_t active_render_ticks = 0;
-
-    // 2. Monolithic continuous render track loop
     while (true) {
-        active_render_ticks++;
+        live_distro_ticks++;
+        uint_to_string_freestanding(live_distro_ticks, tick_string);
 
-        // A. Clear hidden RAM staging canvas to your signature dark slate background
-        clear_back_buffer(COLOR_DARK_SLATE);
+        // 1. Render our high-contrast distribution header banners
+        print_string_raw(11, 10, "==================================================", ATTR_GOLD);
+        print_string_raw(12, 10, "  ANTAGONIST OS LIVE WORKSPACE PLATFORM INSTANCE   ", ATTR_GOLD);
+        print_string_raw(13, 10, "==================================================", ATTR_GOLD);
 
-        // B. Paint a crisp solid gold border bar along the top edge of the display
-        for (uint32_t x = 0; x < SCREEN_WIDTH; x++) {
-            put_pixel_buffer(x, 10, COLOR_GOLD);
-            put_pixel_buffer(x, 11, COLOR_GOLD);
+        // 2. Output real-time system performance telemetry indices
+        print_string_raw(15, 12, "DISTRO STATUS: RUNNING (MONOLITHIC MASTER)", ATTR_WHITE);
+        print_string_raw(16, 12, "REAL-TIME TELEMETRY SYSTEM TICKS: ", ATTR_LIGHT_CYAN);
+        print_string_raw(16, 46, tick_string, ATTR_MINT_GREEN);
+
+        // 3. Automated safe shutdown checkpoint simulation gate
+        if (live_distro_ticks >= 1200) {
+            // Clear the workspace and display our final clean standby metrics
+            for (int i = 0; i < 4000; i += 2) {
+                ((volatile char*)0xB8000)[i] = ' ';
+                ((volatile char*)0xB8000)[i+1] = 0x07;
+            }
+            print_string_raw(12, 15, "ANTAGONIST OS DISTRIBUTION POWERED DOWN SAFELY", ATTR_GOLD);
+            print_string_raw(13, 24, "SYSTEM CORE TERMINATED HALT", ATTR_WHITE);
+
+            // Lock the CPU lanes permanently into standby rest modes
+            while (true) {
+                asm volatile("cli; hlt");
+            }
         }
 
-        // C. Draw our custom bitmap text profiler indicators
-        render_performance_profiler(active_render_ticks);
-
-        // D. Flush the completed 480,000-pixel RAM canvas straight to the physical screen!
-        swap_graphics_buffers();
-
-        // Minor loop slowdown delay loop to keep the counter human-readable
-        for (volatile uint32_t d = 0; d < 400000; d++);
+        // Execution speed control delay loop to keep the counter human-readable
+        for (volatile uint32_t delay = 0; delay < 2000000; delay++);
     }
 }
