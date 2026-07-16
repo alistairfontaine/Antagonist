@@ -82,25 +82,40 @@ extern "C" void antagonist_main() {
         uint_to_string_freestanding(live_distro_ticks, tick_string);
 
         /*
-           1. Poll the keyboard controller ports to shift folders!
+           1. Edge-Triggered Keyboard Port Debouncer Matrix (Phase B1)
+              Bypasses hardware repeat storms by caching raw scancode transitions.
               Key '1' = /root, Key '2' = /sys, Key '3' = /bin, Key '4' = /user
         */
+        static uint8_t last_scancode = 0;
         uint8_t live_scancode = inb(0x60);
-        if (!(live_scancode & 0x80)) { // Verify it is an active make code press
-            if (live_scancode == 0x02) active_directory_index = 0;
-            if (live_scancode == 0x03) active_directory_index = 1;
-            if (live_scancode == 0x04) active_directory_index = 2;
-            if (live_scancode == 0x05) active_directory_index = 3;
 
-            /*
-               🔥 PERSISTENT VISUAL SAVE TRIGGER 🔥
-               Intercept Spacebar (scancode 0x39) to draw a clear confirmation
-               row mapping across your active dashboard coordinates!
-            */
-            if (live_scancode == 0x39) {
-                print_string_raw(15, 12, ">> META CONTEXT ACTIVE SLOT LOCKED AND SECURED!", ATTR_GOLD);
+        if (live_scancode != last_scancode) {
+            last_scancode = live_scancode;
+
+            // If bit 7 is set, it's a key release event (break code) -> clear tracker states
+            if (live_scancode & 0x80) {
+                if ((live_scancode & 0x7F) == 0x39) {
+                    // Wipe the save notification row cleanly when spacebar is released
+                    print_string_raw(15, 12, "                                              ", ATTR_GOLD);
+                }
+            }
+            // Process clean, edge-triggered key press make codes
+            else {
+                if (live_scancode == 0x02) active_directory_index = 0;
+                if (live_scancode == 0x03) active_directory_index = 1;
+                if (live_scancode == 0x04) active_directory_index = 2;
+                if (live_scancode == 0x05) active_directory_index = 3;
+
+                /*
+                   🔥 PERSISTENT VISUAL SAVE TRIGGER 🔥
+                   Intercept fresh Spacebar ticks to output a single confirmation row!
+                */
+                if (live_scancode == 0x39) {
+                    print_string_raw(15, 12, ">> META CONTEXT ACTIVE SLOT LOCKED AND SECURED!", ATTR_GOLD);
+                }
             }
         }
+
 
 
         uint_to_string_freestanding(workspace_folders[active_directory_index].active_files_count, file_count_string);
