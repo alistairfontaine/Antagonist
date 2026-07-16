@@ -7,8 +7,8 @@
 
 /*
    Antagonist OS Distribution Master Initialization Gateway.
-   Direct Hardware Port Polling Engine. Bypasses restricted kernel interrupt
-   line blocks to read keyboard controller registers natively in protected mode.
+   Direct text-mode video dashboard with procedural scrolling landscapes,
+   interactive item hotbar arrays, and dynamic day/night vector color loops.
 */
 
 // Standard VGA text mode color attribute flags
@@ -17,8 +17,9 @@
 #define ATTR_WHITE           0x0F
 #define ATTR_MINT_GREEN      0x0A
 #define ATTR_SLATE_GRAY      0x08
+#define ATTR_LIGHT_PURPLE    0x0D
 
-/* Low-level port input assembly wrapper to query keyboard data lines directly */
+// Low-level port input assembly wrapper to query keyboard data lines directly
 inline uint8_t inb(uint16_t port) {
     uint8_t ret;
     asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
@@ -76,52 +77,74 @@ extern "C" void antagonist_main() {
         live_distro_ticks++;
         uint_to_string_freestanding(live_distro_ticks, tick_string);
 
-        /*
-           2. DIRECT HARDWARE CHIP PORT POLLING MATRIX
-              Bypasses standard interrupt blockages by sampling I/O port 0x60 directly.
-              Maps scancodes 0x02, 0x03, 0x04, 0x05 straight to keys 1, 2, 3, 4.
-        */
+        // 2. Direct Hardware Port Polling Filter Mask to prevent scancode bouncing
         uint8_t live_scancode = inb(0x60);
-        if (live_scancode >= 0x02 && live_scancode <= 0x05) {
-            update_hotbar_selection(live_scancode);
+        if (!(live_scancode & 0x80)) { // Only update if it's a fresh press (no break code)
+            if (live_scancode >= 0x02 && live_scancode <= 0x05) {
+                update_hotbar_selection(live_scancode);
+            }
         }
 
-        // 3. Render our high-contrast distribution header banners
+        /*
+           3. DYNAMIC DAY/NIGHT ENVIRONMENT INTERPOLATOR (PHASE A4)
+              Calculates a time phase sector based on our active hardware clock ticks.
+              Cycles every 600 ticks through Day, Dusk, Night, and Dawn states.
+        */
+        uint32_t time_cycle = live_distro_ticks % 600;
+        uint8_t environmental_color = ATTR_SLATE_GRAY;
+        const char* time_label = "NIGHT";
+
+        if (time_cycle < 150) {
+            environmental_color = ATTR_MINT_GREEN; // High-noon brilliant day slate
+            time_label = "DAY  ";
+        } else if (time_cycle >= 150 && time_cycle < 300) {
+            environmental_color = ATTR_GOLD;       // Sunset golden transition phase
+            time_label = "DUSK ";
+        } else if (time_cycle >= 300 && time_cycle < 450) {
+            environmental_color = ATTR_SLATE_GRAY; // Deep night mask tone
+            time_label = "NIGHT";
+        } else {
+            environmental_color = ATTR_LIGHT_PURPLE; // Dawn twilight purple accent
+            time_label = "DAWN ";
+        }
+
+        // 4. Render our high-contrast distribution header banners
         print_string_raw(1, 10, "==================================================", ATTR_GOLD);
         print_string_raw(2, 10, "  ANTAGONIST OS LIVE WORKSPACE PLATFORM INSTANCE   ", ATTR_GOLD);
         print_string_raw(3, 10, "==================================================", ATTR_GOLD);
 
-        // 4. Output real-time system performance telemetry indices
+        // 5. Output real-time system performance telemetry indices
         print_string_raw(5, 12, "DISTRO STATUS: RUNNING (MONOLITHIC MASTER)", ATTR_WHITE);
         print_string_raw(6, 12, "REAL-TIME TELEMETRY SYSTEM TICKS: ", ATTR_LIGHT_CYAN);
         print_string_raw(6, 46, tick_string, ATTR_MINT_GREEN);
 
-        /*
-           5. Render our Phase A3 Inventory Selection Interface Bar!
-        */
-        print_string_raw(8, 12, "CREATIVE HOTBAR SELECTION:", ATTR_WHITE);
-        print_string_raw(9, 12, "ACTIVE COMPONENT VELD: ", ATTR_LIGHT_CYAN);
+        // Output our active day/night cycle engine telemetry text character states
+        print_string_raw(7, 12, "ENVIRONMENT ENVIRONMENT MATRIX INDEX: ", ATTR_LIGHT_CYAN);
+        print_string_raw(7, 50, time_label, environmental_color);
 
-        // Wipe old material slot labels quickly to ensure crisp variable layout text
-        print_string_raw(9, 35, "              ", ATTR_WHITE);
-        print_string_raw(9, 35, get_active_material_name(), get_active_material_attribute());
+        // 6. Render our Phase A3 Inventory Selection Interface Bar
+        print_string_raw(9, 12, "CREATIVE HOTBAR SELECTION:", ATTR_WHITE);
+        print_string_raw(10, 12, "ACTIVE COMPONENT VELD: ", ATTR_LIGHT_CYAN);
+        print_string_raw(10, 35, "              ", ATTR_WHITE);
+        print_string_raw(10, 35, get_active_material_name(), get_active_material_attribute());
 
-        // 6. Compute and render our Phase A2 Procedural Terrain Generation Maps
-        print_string_raw(11, 10, "--- PROCEDURAL TOPOLOGY STREAM (PHASE A2) ---", ATTR_LIGHT_CYAN);
+        // 7. Compute and render our Phase A2 Procedural Terrain Generation Maps
+        print_string_raw(12, 10, "--- PROCEDURAL TOPOLOGY STREAM (PHASE A2) ---", ATTR_LIGHT_CYAN);
         generate_procedural_topography(live_distro_ticks, terrain_matrix);
 
+        // Rasterize the scrolling landscape lines utilizing our live dynamic environmental color!
         for (int y = 0; y < 5; y++) {
             char line_temp_buffer[81];
             for (int x = 0; x < 80; x++) {
                 line_temp_buffer[x] = terrain_matrix[(y * 80) + x];
             }
             line_temp_buffer[80] = '\0';
-            print_string_raw(13 + y, 0, line_temp_buffer, ATTR_SLATE_GRAY);
+            print_string_raw(14 + y, 0, line_temp_buffer, environmental_color);
         }
 
-        print_string_raw(19, 10, "==================================================", ATTR_GOLD);
+        print_string_raw(20, 10, "==================================================", ATTR_GOLD);
 
-        // 7. Automated safe shutdown checkpoint simulation gate set to 5,000 ticks
+        // 8. Automated safe shutdown checkpoint simulation gate set to 5,000 ticks
         if (live_distro_ticks >= 5000) {
             for (int i = 0; i < 4000; i += 2) {
                 ((volatile char*)0xB8000)[i] = ' ';
