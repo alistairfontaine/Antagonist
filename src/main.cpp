@@ -13,12 +13,12 @@
    VFAT RAM-disk storage cataloging and Bounded Binary Execution Modules.
 */
 
-// Standard VGA text mode color attribute flags
-#define ATTR_LIGHT_CYAN      0x0B
-#define ATTR_GOLD            0x0E
-#define ATTR_WHITE           0x0F
-#define ATTR_MINT_GREEN      0x0A
-#define ATTR_SLATE_GRAY      0x08
+// Standard VGA text mode color attribute flags (Logo-Matched Palette)
+#define ATTR_LIGHT_CYAN      0x0C  // Remapped to Vibrant Red (0x0C)
+#define ATTR_GOLD            0x0C  // Remapped to Vibrant Red (0x0C)
+#define ATTR_WHITE           0x0F  // Pristine High-Contrast White (0x0F)
+#define ATTR_MINT_GREEN      0x0F  // Remapped to Pristine White (0x0F)
+#define ATTR_SLATE_GRAY      0x07  // Standard Clean Slate Gray (0x07)
 
 /* Local Directory Structure Limits */
 #define FOLDER_COUNT         4
