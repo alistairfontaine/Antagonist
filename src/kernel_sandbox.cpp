@@ -156,13 +156,15 @@ extern "C" void kernel_main() {
         i++;
     }
 
-    /* Step 4: Enable Hardware Interrupts globally */
-    asm volatile("sti");
-
     /*
-       Step 5: Hand over execution to the Antagonist Distribution Master Gateway!
+       Step 4: Hand over execution to the Antagonist Distribution Master Gateway!
+       Wakes up the high-resolution VESA linear framebuffer safely before
+       asynchronous device timer interrupts or schedulers can touch the machine.
     */
     antagonist_main();
+
+    /* Step 5: Enable Hardware Interrupts globally */
+    asm volatile("sti");
 
     while (true) {
         switch_task();

@@ -3,11 +3,6 @@
 #include "buffer.h"
 #include "font.h"
 
-/*
-   Antagonist OS Distribution Master Initialization Gateway.
-   Pure integer bare-metal rendering engine to completely eliminate FPU faults.
-*/
-
 #define COLOR_DARK_SLATE    0x001A1E24
 #define COLOR_GOLD          0x00FFD700
 #define COLOR_CYAN          0x0000FFFF
@@ -45,23 +40,23 @@ static void render_performance_profiler(uint32_t active_ticks) {
     draw_string_gfx(10, 20, "SYS METRICS:", COLOR_CYAN);
     draw_string_gfx(110, 20, "TICKS:", COLOR_WHITE);
     draw_string_gfx(165, 20, tick_str_buffer, COLOR_MINT_GREEN);
-    draw_string_gfx(10, 35, "ACTIVE INDICES: INITIALIZED OK", COLOR_WHITE);
+    draw_string_gfx(10, 35, "ACTIVE INDICES: MONOLITHIC RUN", COLOR_WHITE);
 }
 
 extern "C" void antagonist_main() {
-    // 1. Force fully wake up the high-resolution VESA graphics card hardware
+    // 1. Initialize the high-resolution VESA VBE 800x600 32-bit graphics hardware
     init_vbe_graphics();
 
     uint32_t active_render_ticks = 0;
 
-    // 2. Continuous monolithic visual render track loop
+    // 2. Monolithic continuous render track loop
     while (true) {
         active_render_ticks++;
 
-        // A. Clear our hidden RAM staging canvas to your signature dark slate background
+        // A. Clear hidden RAM staging canvas to your signature dark slate background
         clear_back_buffer(COLOR_DARK_SLATE);
 
-        // B. Paint a gorgeous solid gold border bar directly onto the top edge
+        // B. Paint a crisp solid gold border bar along the top edge of the display
         for (uint32_t x = 0; x < SCREEN_WIDTH; x++) {
             put_pixel_buffer(x, 10, COLOR_GOLD);
             put_pixel_buffer(x, 11, COLOR_GOLD);
@@ -70,10 +65,10 @@ extern "C" void antagonist_main() {
         // C. Draw our custom bitmap text profiler indicators
         render_performance_profiler(active_render_ticks);
 
-        // D. Flush the completed 480,000-pixel RAM canvas straight to the physical monitor screen!
+        // D. Flush the completed 480,000-pixel RAM canvas straight to the physical screen!
         swap_graphics_buffers();
 
-        // Minor loop slowdown delay to make the count easily human-readable
+        // Minor loop slowdown delay loop to keep the counter human-readable
         for (volatile uint32_t d = 0; d < 400000; d++);
     }
 }
