@@ -3,32 +3,40 @@
 
 #include <stdint.h>
 
-/*
-   This structure defines a single 8-byte GDT entry descriptor.
-   We use __attribute__((packed)) to prevent the C++ compiler from
-   adding secret padding bytes, forcing it to match the exact hardware layout required by the Intel CPU registers.
-*/
+/* Standard x86 GDT Descriptor Structural Attribute Layout */
 struct gdt_entry {
-    uint16_t limit_low;     // The lower 16 bits of the memory segment limit size
-    uint16_t base_low;      // The lower 16 bits of the memory segment base address
-    uint8_t  base_middle;   // The next 8 bits of the memory segment base address
-    uint8_t  access;        // Access flags determining segment privileges (Code/Data/Kernel/User)
-    uint8_t  granularity;   // Size multiplier limits and operational mode bit flags
-    uint8_t  base_high;     // The final 8 bits of the memory segment base address
+    uint16_t limit_low;
+    uint16_t base_low;
+    uint8_t  base_middle;
+    uint8_t  access;
+    uint8_t  granularity;
+    uint8_t  base_high;
 } __attribute__((packed));
 
-/*
-   This special pointer structure tells the CPU hardware where our GDT array lives
-   and exactly how large it is.
-*/
 struct gdt_ptr {
-    uint16_t limit;         // The total size of the GDT array minus 1 byte
-    uint32_t base;          // The linear physical memory address where the array starts
+    uint16_t limit;
+    uint32_t base;
 } __attribute__((packed));
 
 /*
-   Exposing our primary engine functions to the rest of the kernel system layers.
+   Hardware Task State Segment (TSS) Structure Blueprint.
+   Maintains supervisor privilege registers to trap Ring 3 context switches.
 */
-void init_gdt();
+struct tss_entry_struct {
+    uint32_t prev_tss;
+    uint32_t esp0;     // Privilege Ring 0 Stack Pointer
+    uint32_t ss0;      // Privilege Ring 0 Stack Segment Selector
+    uint32_t esp1; uint32_t ss1; uint32_t esp2; uint32_t ss2;
+    uint32_t cr3; uint32_t eip; uint32_t eflags;
+    uint32_t eax; uint32_t ecx; uint32_t edx; uint32_t ebx;
+    uint32_t esp; uint32_t ebp; uint32_t esi; uint32_t edi;
+    uint32_t es;  uint32_t cs;  uint32_t ss;  uint32_t ds; uint32_t fs; uint32_t gs;
+    uint32_t ldt; uint16_t trap; uint16_t iomap_base;
+} __attribute__((packed));
+
+extern "C" {
+    void init_gdt();
+    void gdt_set_gate(int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran);
+}
 
 #endif
