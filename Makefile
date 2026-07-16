@@ -10,7 +10,7 @@ LDFLAGS = -m elf_i386 -T kernel/linker.ld
 
 # Completely self-contained local object compilation paths!
 KERNEL_OBJS = kernel/boot.o kernel/kernel.o kernel/gdt.o kernel/idt.o kernel/timer.o kernel/keyboard.o kernel/pmm.o kernel/vmm.o kernel/heap.o kernel/task.o kernel/ata.o
-DISTRO_OBJS = src/main.o src/vbe.o src/buffer.o src/palette.o src/input.o src/math3d.o src/raycast.o src/collision.o src/spatial.o src/selection.o src/particle.o src/modification.o src/tensor.o src/weights.o src/vocab.o src/tokenizer.o src/threads.o src/font.o src/persistence.o src/procedural.o src/hotbar.o src/vfat.o
+DISTRO_OBJS = src/main.o src/vbe.o src/buffer.o src/palette.o src/input.o src/math3d.o src/raycast.o src/collision.o src/spatial.o src/selection.o src/particle.o src/modification.o src/tensor.o src/weights.o src/vocab.o src/tokenizer.o src/threads.o src/font.o src/persistence.o src/procedural.o src/hotbar.o src/vfat.o src/loader.o
 
 
 
@@ -107,6 +107,10 @@ src/hotbar.o: src/hotbar.cpp
 
 src/vfat.o: src/vfat.cpp
 	$(CC) $(CFLAGS) src/vfat.cpp -o src/vfat.o
+
+src/loader.o: src/loader.cpp
+	$(CC) $(CFLAGS) src/loader.cpp -o src/loader.o
+
 
 
 
