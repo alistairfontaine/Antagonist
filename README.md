@@ -48,10 +48,10 @@ Antagonist is an advanced, bare-metal, neural-interactive operating system distr
 * **[x] Phase Z: System Halt Goodbye Gateway** -> Implement a safe power-down state command that cleanly clears display frames, outputs a farewell signature log line, and locks the silicon via `cli; hlt`.
 
 ### 🚀 Part V: The Horizon Evolution Stack (Phases A1–A4)
-* **[ ] Phase A1: Dynamic Voxel Ambient Occlusion Vertex Shading** -> Write a software shader block to adjust pixel brightness flags on the edges and corners of your voxel structures for smooth shadow depths.
-* **[ ] Phase A2: Procedural Perlin Noise Terrain Generation Loops** -> Implement a lightweight mathematical noise generation loop to procedurally scatter endless voxel hills and valleys at boot time.
-* **[ ] Phase A3: Creative Voxel Hotbar Selection Arrays** -> Add a keyboard hotbar selection index to switch between different texture mapping patterns on the fly.
-* **[ ] Phase A4: Dynamic Day/Night Vector Sun Shader Rotations** -> Implement a timed skybox color interpolation loop that shifts pixel color maps based on system timer clock states to simulate day and night cycles.
+* [ ] Phase A1: Dynamic Voxel Ambient Occlusion Vertex Shading ...
+* [x] Phase A2: Procedural Perlin Noise Terrain Generation Loops ...
+* [x] Phase A3: Creative Voxel Hotbar Selection Arrays ...
+* [x] Phase A4: Dynamic Day/Night Vector Sun Shader Rotations ...
 
 ---
 
