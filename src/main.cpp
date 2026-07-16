@@ -1,9 +1,13 @@
 #include <stdint.h>
+#include "vbe.h"
+#include "buffer.h"
+#include "font.h"
+#include "procedural.h"
 
 /*
    Antagonist OS Distribution Master Initialization Gateway.
-   Direct text-mode video engine. Writes character bytes straight to 0xB8000
-   to completely avoid VGA register clocking failures and black screens.
+   Direct text-mode video dashboard with integrated real-time
+   procedural terrain generation loop animations.
 */
 
 // Standard VGA text mode color attribute flags
@@ -11,6 +15,7 @@
 #define ATTR_GOLD            0x0E
 #define ATTR_WHITE           0x0F
 #define ATTR_MINT_GREEN      0x0A
+#define ATTR_SLATE_GRAY      0x08
 
 /*
    Lightweight freestanding string printer.
@@ -18,13 +23,12 @@
 */
 static void print_string_raw(int row, int col, const char* str, uint8_t attribute) {
     volatile char* video_memory = (volatile char*)0xB8000;
-    // Calculate the linear memory index tracking slot for the 80-column row grid
     int index = (row * 80 + col) * 2;
 
     int i = 0;
     while (str[i] != '\0') {
-        video_memory[index] = str[i];          // Character byte
-        video_memory[index + 1] = attribute;   // Style color byte
+        video_memory[index] = str[i];
+        video_memory[index + 1] = attribute;
         index += 2;
         i++;
     }
@@ -56,37 +60,56 @@ extern "C" void antagonist_main() {
     uint32_t live_distro_ticks = 0;
     char tick_string[16];
 
+    // Allocate a flat 400-byte staging grid for our text topography viewport
+    char terrain_matrix[400];
+
     while (true) {
         live_distro_ticks++;
         uint_to_string_freestanding(live_distro_ticks, tick_string);
 
         // 1. Render our high-contrast distribution header banners
-        print_string_raw(11, 10, "==================================================", ATTR_GOLD);
-        print_string_raw(12, 10, "  ANTAGONIST OS LIVE WORKSPACE PLATFORM INSTANCE   ", ATTR_GOLD);
-        print_string_raw(13, 10, "==================================================", ATTR_GOLD);
+        print_string_raw(2, 10, "==================================================", ATTR_GOLD);
+        print_string_raw(3, 10, "  ANTAGONIST OS LIVE WORKSPACE PLATFORM INSTANCE   ", ATTR_GOLD);
+        print_string_raw(4, 10, "==================================================", ATTR_GOLD);
 
         // 2. Output real-time system performance telemetry indices
-        print_string_raw(15, 12, "DISTRO STATUS: RUNNING (MONOLITHIC MASTER)", ATTR_WHITE);
-        print_string_raw(16, 12, "REAL-TIME TELEMETRY SYSTEM TICKS: ", ATTR_LIGHT_CYAN);
-        print_string_raw(16, 46, tick_string, ATTR_MINT_GREEN);
+        print_string_raw(6, 12, "DISTRO STATUS: RUNNING (MONOLITHIC MASTER)", ATTR_WHITE);
+        print_string_raw(7, 12, "REAL-TIME TELEMETRY SYSTEM TICKS: ", ATTR_LIGHT_CYAN);
+        print_string_raw(7, 46, tick_string, ATTR_MINT_GREEN);
 
-        // 3. Automated safe shutdown checkpoint simulation gate
-        if (live_distro_ticks >= 1200) {
-            // Clear the workspace and display our final clean standby metrics
+        // 3. Compute and render our Phase A2 Procedural Terrain Generation Maps
+        print_string_raw(10, 10, "--- PROCEDURAL TOPOLOGY STREAM (PHASE A2) ---", ATTR_LIGHT_CYAN);
+
+        // Populate our local array buffer with raw bitwise prime-scramble noise blocks
+        generate_procedural_topography(live_distro_ticks, terrain_matrix);
+
+        // Rasterize the scrolling procedural map grid line-by-line across rows 12-16
+        for (int y = 0; y < 5; y++) {
+            char line_temp_buffer[81];
+            for (int x = 0; x < 80; x++) {
+                line_temp_buffer[x] = terrain_matrix[(y * 80) + x];
+            }
+            line_temp_buffer[80] = '\0'; // Enforce null termination bounds
+            print_string_raw(12 + y, 0, line_temp_buffer, ATTR_SLATE_GRAY);
+        }
+
+        print_string_raw(19, 10, "==================================================", ATTR_GOLD);
+
+        // 4. Automated safe shutdown checkpoint simulation gate expanded to 5,000 ticks
+        if (live_distro_ticks >= 5000) {
             for (int i = 0; i < 4000; i += 2) {
                 ((volatile char*)0xB8000)[i] = ' ';
                 ((volatile char*)0xB8000)[i+1] = 0x07;
             }
-            print_string_raw(12, 15, "ANTAGONIST OS DISTRIBUTION POWERED DOWN SAFELY", ATTR_GOLD);
-            print_string_raw(13, 24, "SYSTEM CORE TERMINATED HALT", ATTR_WHITE);
+            print_string_raw(11, 15, "ANTAGONIST OS DISTRIBUTION POWERED DOWN SAFELY", ATTR_GOLD);
+            print_string_raw(12, 24, "SYSTEM CORE TERMINATED HALT", ATTR_WHITE);
 
-            // Lock the CPU lanes permanently into standby rest modes
             while (true) {
                 asm volatile("cli; hlt");
             }
         }
 
-        // Execution speed control delay loop to keep the counter human-readable
-        for (volatile uint32_t delay = 0; delay < 2000000; delay++);
+        // Delay execution loops to keep the scrolling fluid and human-readable
+        for (volatile uint32_t delay = 0; delay < 1200000; delay++);
     }
 }
