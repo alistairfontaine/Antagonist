@@ -103,14 +103,12 @@ To maintain absolute objective engineering clarity, the following sections outli
 * **Dynamic VGA Framebuffer Access:** It prints text characters and color styling masks natively from 32-bit protected mode by writing direct bitwise data shifts straight to the physical video memory address `0xB8000`.
 
 ### ❌ 4.2 What the System DOES NOT Do
-* **No Real-Hardware Permanent Disk Persistency:** The architecture **does not** physically serialize file logs or active workspace configurations back to the laptop's underlying hard drive blocks across a cold power-down cycle. Because QEMU mounts raw storage tracks with un-synchronized write-through snapshot cache layers, any data written to the hard disk remains volatile in host memory registers.
 * **No Dynamic Memory/Heap Allocation:** The distribution contains **no heap allocation mechanics** inside application space. There is no `malloc()`, `new`, or standard dynamic allocation vectoring. Every structural file node, index string buffer, directory link path, and process tracking register map must be pre-allocated with rigid, fixed-size bounds inside static data segments to protect memory boundaries from page table leaks.
-* **No True Ring 3 Code Execution:** The process loader (`src/loader.cpp`) parses mock application instruction string tokens inside a simulated user-space environment and evaluates native machine steps within functional jump buffer arrays. It **does not** decouple execution from the master boot stack into isolated Ring 3 rings. Attempting a hard privilege drop via assembly `iret` frames causes direct `inb(0x60)` hardware port queries inside the user-space loop to trigger an instant General Protection Fault (Exception 13), hard-rebooting the motherboard back to SeaBIOS. True privilege separation requires migrating all direct I/O port queries into dedicated system call wrappers executing exclusively via `int 0x80`.
-
-* **No Real-Time Hardware Interrupt Trapping for Processes:** Applications executing within the process manager are completely separated from real physical hardware drivers. A running program cannot poll I/O ports or handle direct device lines natively; it relies entirely on the kernel's software system call router hub to request video text prints or raw keyboard inputs.
+* **No Real-Time Hardware Interrupt Trapping for Processes:** Applications executing within the process manager are completely separated from real physical hardware drivers. A running program cannot poll I/O ports or handle direct device lines natively; it relies entirely on the kernel's software system call router hub to request video text prints or raw keyboard inputs via the `int $0x80` gateway vectors.
 * **No Multi-User or Network Interfacing:** The framework operates purely as a localized, single-task user-space workstation panel. It contains zero networking sockets, zero ethernet loopback device configurations, and no multi-user profile permission checks.
 
 ---
+
 
 ## 🚥 5. Hardware Register & Port Mapping Allocation Sheet
 
