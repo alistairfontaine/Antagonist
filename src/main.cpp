@@ -5,10 +5,12 @@
 #include "procedural.h"
 #include "hotbar.h"
 #include "vfat.h"
+#include "loader.h"
 
 /*
    Antagonist OS Distribution Master Initialization Gateway.
-   Independent File-System Workstation Dashboard with live VFAT RAM-disk allocations.
+   Independent File-System Workstation Dashboard with integrated
+   VFAT RAM-disk storage cataloging and Bounded Binary Execution Modules.
 */
 
 // Standard VGA text mode color attribute flags
@@ -29,11 +31,11 @@ struct DirectoryNode {
 
 // Low-level port input assembly wrapper
 inline uint8_t inb(uint16_t port) {
-
     uint8_t ret;
     asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }
+
 
 /* Lightweight freestanding string printer */
 static void print_string_raw(int row, int col, const char* str, uint8_t attribute) {
@@ -47,7 +49,6 @@ static void print_string_raw(int row, int col, const char* str, uint8_t attribut
         i++;
     }
 }
-
 /* Freestanding Integer-To-ASCII Base 10 Converter */
 static void uint_to_string_freestanding(uint32_t value, char* dest_buffer) {
     int i = 0;
@@ -67,16 +68,16 @@ static void uint_to_string_freestanding(uint32_t value, char* dest_buffer) {
     }
     dest_buffer[i] = '\0';
 }
-
 extern "C" void antagonist_main() {
     uint32_t live_distro_ticks = 0;
     char tick_string[16];
     char file_count_string[16];
+    char status_string[16];
 
-    // 1. Initialize our Virtual RAM disk partition entries
+    // Initialize our Virtual RAM disk partition entries
     init_vfat_disk();
 
-    // 2. Seed some sample persistent data filenodes directly into directory tracks
+    // Seed sample persistent data filenodes directly into directory tracks
     create_virtual_file("sys_init.sys", 0, "SUCCESS: KERNEL CONTEXT INITIALIZED PRIVILEGE LEVEL 0");
     create_virtual_file("readme.txt",   0, "WELCOME TO THE INDEPENDENT ANTAGONIST LIVE WORKSPACE");
     create_virtual_file("config.cfg",   1, "SET ARCH_MODE=32; SET TELEMETRY_HZ=100; SET FPU=1");
@@ -91,10 +92,13 @@ extern "C" void antagonist_main() {
     workspace_folders[3] = { "/user", "LOCAL WORKSPACE RECOVERY USER", 0 };
 
     uint32_t active_directory_index = 0;
+    const char* active_exec_log = "[No binary files executed yet]";
+    uint32_t active_exec_status = 0;
 
     while (true) {
         live_distro_ticks++;
         uint_to_string_freestanding(live_distro_ticks, tick_string);
+        uint_to_string_freestanding(active_exec_status, status_string);
 
         // Dynamically pull the live structural file counts directly from the VFAT storage manager tables
         for (uint32_t f = 0; f < FOLDER_COUNT; f++) {
@@ -123,16 +127,27 @@ extern "C" void antagonist_main() {
                 if (live_scancode == 0x05) active_directory_index = 3;
 
                 /*
-                   🔥 PHASE B2: VFAT FILE PAYLOAD PERSISTENCE SERIALIZATION GATES 🔥
-                   Intercept fresh Spacebar ticks to lock context.
+                   🔥 PHASE B3: BOUNDED EXECUTABLE BINARY OBJECT LOAD RUNNER 🔥
+                   Intercept Enter key (scancode 0x1C). If user is inside /bin, parse and execute
+                   the active compiled program payload straight out of our VFAT disk segments!
                 */
+                if (live_scancode == 0x1C) {
+                    if (active_directory_index == 2) { // Verification boundary gate locked to /bin folder slot
+                        const char* target_prog = get_virtual_file_name(0, active_directory_index);
+                        const char* target_code = get_virtual_file_content(0, active_directory_index);
+
+                        if (target_prog && target_code) {
+                            execute_bounded_binary(target_prog, target_code);
+                            active_exec_log = get_active_process_log();
+                            active_exec_status = get_active_process_status();
+                        }
+                    }
+                }
+
                 if (live_scancode == 0x39) {
                     print_string_raw(15, 12, ">> WORKSPACE RECOVERY CONTEXT PERSISTED TO STATE CELL!", ATTR_GOLD);
                 }
 
-                /*
-                   🔥 PHASE B6: HARDWARE GATE SYSTEM SHUTDOWN TERMINATOR 🔥
-                */
                 if (live_scancode == 0x06) {
                     for (int i = 0; i < 4000; i += 2) {
                         ((volatile char*)0xB8000)[i] = ' ';
@@ -157,13 +172,11 @@ extern "C" void antagonist_main() {
         print_string_raw(6, 12, "REAL-TIME TELEMETRY SYSTEM TICKS: ", ATTR_LIGHT_CYAN);
         print_string_raw(6, 46, tick_string, ATTR_MINT_GREEN);
 
-        /*
-           6. Render Interactive Directory Navigation Matrices
-        */
+        // 6. Render Interactive Directory Navigation Matrices
         print_string_raw(8, 10, "--- FILE MATRIX WORKSTATION DIRECTORY NAV ---", ATTR_LIGHT_CYAN);
 
         print_string_raw(10, 12, "ACTIVE DIRECTORY INDEX LINK: ", ATTR_WHITE);
-        print_string_raw(10, 41, "        ", ATTR_WHITE); // Fast wipe buffer
+        print_string_raw(10, 41, "        ", ATTR_WHITE);
         print_string_raw(10, 41, workspace_folders[active_directory_index].folder_path, ATTR_MINT_GREEN);
 
         print_string_raw(11, 12, "MOUNTED DESCRIPTION METADATA: ", ATTR_WHITE);
@@ -174,14 +187,8 @@ extern "C" void antagonist_main() {
         print_string_raw(12, 42, "    ", ATTR_WHITE);
         print_string_raw(12, 42, file_count_string, ATTR_GOLD);
 
-        /*
-           🔥 LIVE VFAT STORAGE CELL READOUT INTERFACE LATCH 🔥
-           Queries the active folder context entries table layout, rendering file
-           allocations and text characters live on your screen viewports!
-        */
+        // Live VFAT Catalog Listing Pass
         print_string_raw(14, 12, "--- LIVE STORAGE CATALOG MATRIX IN DIRECTORY ---", ATTR_SLATE_GRAY);
-
-        // Fast buffer cleanup rows to clear ghost character traces fluidly
         print_string_raw(15, 12, "                                                            ", ATTR_WHITE);
         print_string_raw(16, 12, "                                                            ", ATTR_WHITE);
 
@@ -201,22 +208,33 @@ extern "C" void antagonist_main() {
             }
         }
 
+        /*
+           🔥 INTERACTIVE PROCESS MONITOR OVERLAY VIEWPORT 🔥
+           Pulls real-time insulated pipeline registers from the object loader tracker!
+        */
+        print_string_raw(18, 12, "--- PROCESS MONITOR EXECUTABLE LOG INTERCEPTOR ---", ATTR_SLATE_GRAY);
+        print_string_raw(19, 12, "SYS APP RUN CODE STATUS: ", ATTR_WHITE);
+        print_string_raw(19, 37, "    ", ATTR_WHITE); // Clear trace
+        print_string_raw(19, 37, status_string, ATTR_GOLD);
+
+        print_string_raw(20, 12, "LIVE TRACK REGISTER: ", ATTR_WHITE);
+        print_string_raw(20, 33, "                                                 ", ATTR_WHITE);
+        print_string_raw(20, 33, active_exec_log, ATTR_LIGHT_CYAN);
+
         // 7. Visual Footer Index Slots
-        print_string_raw(18, 10, "[Keys 1-4: Change Folders | Space: Lock Context | Key 5: Exit System]", ATTR_SLATE_GRAY);
-        print_string_raw(19, 10, "==================================================", ATTR_GOLD);
 
-        // 8. Automated safe shutdown checkpoint gate
-        if (live_distro_ticks >= 5000) {
-            for (int i = 0; i < 4000; i += 2) {
-                ((volatile char*)0xB8000)[i] = ' ';
-                ((volatile char*)0xB8000)[i+1] = 0x07;
-            }
-            print_string_raw(11, 15, "ANTAGONIST OS WORKSPACE POWERED DOWN SAFELY", ATTR_GOLD);
-            print_string_raw(12, 24, "SYSTEM CORE TERMINATED HALT", ATTR_WHITE);
-            while (true) { asm volatile("cli; hlt"); }
-        }
-
-        // Keep execution frame cycling smooth
-        for (volatile uint32_t delay = 0; delay < 1200000; delay++);
-    }
+print_string_raw(22, 10, "[Keys 1-4: Change Folders | Enter: Exec /bin Programs | Key 5: Exit]", ATTR_SLATE_GRAY);
+print_string_raw(23, 10, "==================================================", ATTR_GOLD);
+// 8. Automated safe shutdown checkpoint gate
+if (live_distro_ticks >= 5000) {
+for (int i = 0; i < 4000; i += 2) {
+((volatile char*)0xB8000)[i] = ' ';
+((volatile char*)0xB8000)[i+1] = 0x07;
+}
+print_string_raw(11, 15, "ANTAGONIST OS WORKSPACE POWERED DOWN SAFELY", ATTR_GOLD);
+print_string_raw(12, 24, "SYSTEM CORE TERMINATED HALT", ATTR_WHITE);
+while (true) { asm volatile("cli; hlt"); }
+}
+for (volatile uint32_t delay = 0; delay < 1200000; delay++);
+}
 }

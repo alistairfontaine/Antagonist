@@ -12,8 +12,11 @@ extern "C" void antagonist_main();
 extern "C" void sys_handler_stub(); // Reference our new assembly vector gateway loop point
 void kernel_idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags); // Unique local C++ prototype
 
-uint32_t count_alpha = 0;
+// Global Scope Hardware Storage Driver Prototypes
+extern "C" void ata_write_sector(uint32_t lba, const uint8_t* buffer);
+extern "C" void ata_read_sector(uint32_t lba, uint8_t* buffer);
 
+uint32_t count_alpha = 0;
 uint32_t count_beta = 0;
 
 
@@ -227,13 +230,24 @@ extern "C" void syscall_dispatcher(uint32_t* registers) {
         // Pass the live scancode byte directly back into user-space via the eax register slot!
         registers[7] = scancode;
     }
+
+    // 🔥 SYSCALL 3: PERSISTENT STORAGE HARD DRIVE SECTOR WRITE GATEWAY (PHASE V) 🔥
+    else if (syscall_number == 3) {
+        uint32_t target_lba_sector = arg2;             // Passed in ecx (registers)
+        const uint8_t* source_buffer = (const uint8_t*)arg1; // Passed in ebx (registers)
+
+        ata_write_sector(target_lba_sector, source_buffer);
+    }
+
+    // 🔥 SYSCALL 4: PERSISTENT STORAGE HARD DRIVE SECTOR READ GATEWAY (PHASE P) 🔥
+    else if (syscall_number == 4) {
+        uint32_t target_lba_sector = arg2;       // Passed in ecx (registers)
+        uint8_t* destination_buffer = (uint8_t*)arg1; // Passed in ebx (registers)
+
+        ata_read_sector(target_lba_sector, destination_buffer);
+    }
 }
 
-/*
-   Linker Namespace Interface Bridge.
-   Exposes the un-mangled C signature of idt_set_gate to satisfy the final linker phase
-   and maps it straight to the active internal IDT registration context.
-*/
 /*
    Linker Namespace Interface Bridge.
    Maps our localized proxy calls directly into your kernel's true
