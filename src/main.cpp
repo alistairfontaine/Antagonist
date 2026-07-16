@@ -4,12 +4,11 @@
 #include "font.h"
 #include "procedural.h"
 #include "hotbar.h"
+#include "vfat.h"
 
 /*
    Antagonist OS Distribution Master Initialization Gateway.
-   Fully Completed Persistent Workstation Distribution Shell.
-   Driven Exclusively through System Calls (int 0x80) to handle
-   Folder Navigation, Edge-Triggered Debouncing, and Disk Persistence.
+   Independent File-System Workstation Dashboard with live VFAT RAM-disk allocations.
 */
 
 // Standard VGA text mode color attribute flags
@@ -21,7 +20,6 @@
 
 /* Local Directory Structure Limits */
 #define FOLDER_COUNT         4
-#define TARGET_LBA_SECTOR    10  // Hardcoded permanent storage slot index
 
 struct DirectoryNode {
     const char* folder_path;
@@ -31,43 +29,10 @@ struct DirectoryNode {
 
 // Low-level port input assembly wrapper
 inline uint8_t inb(uint16_t port) {
+
     uint8_t ret;
     asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
-}
-
-/*
-   User-Space System Call Wrapper 3: Raw IDE Hard Disk Sector Write (512 Bytes).
-   Passes command number 3 via eax, the memory buffer pointer via ebx,
-   and the targeted LBA sector index block coordinate via ecx.
-*/
-static void sys_disk_write(const uint8_t* buffer, uint32_t lba_sector) {
-    asm volatile (
-        "movl $3, %%eax\n\t"    // Syscall ID 3 (Disk Write)
-        "movl %0, %%ebx\n\t"    // Source memory pointer argument
-        "movl %1, %%ecx\n\t"    // Target LBA sector offset argument
-        "int $0x80\n\t"         // Trigger software interrupt privilege switch
-        :
-        : "g"(buffer), "g"(lba_sector)
-        : "eax", "ebx", "ecx"
-    );
-}
-
-/*
-   User-Space System Call Wrapper 4: Raw IDE Hard Disk Sector Read (512 Bytes).
-   Passes command number 4 via eax, the target destination pointer via ebx,
-   and the targeted LBA sector index block coordinate via ecx.
-*/
-static void sys_disk_read(uint8_t* buffer, uint32_t lba_sector) {
-    asm volatile (
-        "movl $4, %%eax\n\t"    // Syscall ID 4 (Disk Read)
-        "movl %0, %%ebx\n\t"    // Destination memory pointer argument
-        "movl %1, %%ecx\n\t"    // Target LBA sector offset argument
-        "int $0x80\n\t"         // Trigger software interrupt privilege switch
-        :
-        : "g"(buffer), "g"(lba_sector)
-        : "eax", "ebx", "ecx"
-    );
 }
 
 /* Lightweight freestanding string printer */
@@ -108,41 +73,36 @@ extern "C" void antagonist_main() {
     char tick_string[16];
     char file_count_string[16];
 
-    /*
-       🔒 STATIC STORAGE ISOLATION LAYERS 🔒
-       Pulls our 512-byte sector data buffers off the volatile thread stack frames
-       and locks them into permanent compiler-allocated data segment tracks to block memory corruption leaks!
-    */
-    static uint8_t sector_save_buffer[512] = {0};
-    static uint8_t sector_load_buffer[512] = {0};
+    // 1. Initialize our Virtual RAM disk partition entries
+    init_vfat_disk();
+
+    // 2. Seed some sample persistent data filenodes directly into directory tracks
+    create_virtual_file("sys_init.sys", 0, "SUCCESS: KERNEL CONTEXT INITIALIZED PRIVILEGE LEVEL 0");
+    create_virtual_file("readme.txt",   0, "WELCOME TO THE INDEPENDENT ANTAGONIST LIVE WORKSPACE");
+    create_virtual_file("config.cfg",   1, "SET ARCH_MODE=32; SET TELEMETRY_HZ=100; SET FPU=1");
+    create_virtual_file("sh_core.bin",  2, "EXEC_BIN_OFFSET_LOADER_GATE_0X80");
+    create_virtual_file("profile.usr",  3, "USER: ALISTAIR FONTAINE; ROLE: SENIOR SYSTEMS MASTER");
 
     // Initialize our structural workspace directory nodes array matrix
     DirectoryNode workspace_folders[FOLDER_COUNT];
-    workspace_folders[0] = { "/root", "SYSTEM MASTER ROOT LOGS", 14 };
-    workspace_folders[1] = { "/sys",  "KERNEL CONFIG CONTEXTS", 8  };
-    workspace_folders[2] = { "/bin",  "DISTRO COMMAND EXECUTABLES", 22 };
-    workspace_folders[3] = { "/user", "LOCAL WORKSPACE RECOVERY USER", 5 };
+    workspace_folders[0] = { "/root", "SYSTEM MASTER ROOT LOGS", 0 };
+    workspace_folders[1] = { "/sys",  "KERNEL CONFIG CONTEXTS", 0  };
+    workspace_folders[2] = { "/bin",  "DISTRO COMMAND EXECUTABLES", 0 };
+    workspace_folders[3] = { "/user", "LOCAL WORKSPACE RECOVERY USER", 0 };
 
-    /*
-       📂 STANDALONE MEMORY SANDBOX RESTORATION PASS 📂
-       Queries a hardware workspace scratchpad cell mapped inside the BIOS data segment.
-       If a valid active context block tracking index exists, instantly restore it on boot!
-    */
-    volatile uint32_t* persistence_storage_cell = (volatile uint32_t*)0x000004F0;
     uint32_t active_directory_index = 0;
-
-    if (*persistence_storage_cell < FOLDER_COUNT) {
-        active_directory_index = *persistence_storage_cell;
-    }
-
-
 
     while (true) {
         live_distro_ticks++;
         uint_to_string_freestanding(live_distro_ticks, tick_string);
 
+        // Dynamically pull the live structural file counts directly from the VFAT storage manager tables
+        for (uint32_t f = 0; f < FOLDER_COUNT; f++) {
+            workspace_folders[f].active_files_count = get_folder_file_count(f);
+        }
+
         /*
-           1. Edge-Triggered Keyboard Port Debouncer Matrix (Phase B1)
+           3. Edge-Triggered Keyboard Port Debouncer Matrix (Phase B1)
               Key '1' = /root, Key '2' = /sys, Key '3' = /bin, Key '4' = /user
         */
         static uint8_t last_scancode = 0;
@@ -153,7 +113,6 @@ extern "C" void antagonist_main() {
 
             if (live_scancode & 0x80) {
                 if ((live_scancode & 0x7F) == 0x39) {
-                    // Expanded space alignment padding to 60 characters to ensure clean erasing
                     print_string_raw(15, 12, "                                                            ", ATTR_GOLD);
                 }
             }
@@ -164,74 +123,89 @@ extern "C" void antagonist_main() {
                 if (live_scancode == 0x05) active_directory_index = 3;
 
                 /*
-                   🔥 PHASE B2: HARDWARE WORKSPACE PERSISTENCE STORAGE CELLS 🔥
-                   Intercept Spacebar scancodes. Lock our active folder directory context parameters
-                   straight into our persistent scratchpad cell memory allocation block!
+                   🔥 PHASE B2: VFAT FILE PAYLOAD PERSISTENCE SERIALIZATION GATES 🔥
+                   Intercept fresh Spacebar ticks to lock context.
                 */
                 if (live_scancode == 0x39) {
-                    volatile uint32_t* persistence_storage_cell = (volatile uint32_t*)0x000004F0;
-                    *persistence_storage_cell = active_directory_index;
-
                     print_string_raw(15, 12, ">> WORKSPACE RECOVERY CONTEXT PERSISTED TO STATE CELL!", ATTR_GOLD);
                 }
 
                 /*
                    🔥 PHASE B6: HARDWARE GATE SYSTEM SHUTDOWN TERMINATOR 🔥
-                   Intercepts Key '5' (scancode 0x06). Cleanly flushes the text canvas
-                   and triggers a safe hardware CPU halt command natively in protected mode.
                 */
                 if (live_scancode == 0x06) {
-                    // Blank out the entire 80x25 text video matrix frame area
                     for (int i = 0; i < 4000; i += 2) {
                         ((volatile char*)0xB8000)[i] = ' ';
                         ((volatile char*)0xB8000)[i+1] = 0x07;
                     }
-                    print_string_raw(11, 15, "ANTAGONIST OS RELEASE RUNWAY CONTROL COMPLETED", 0x0E);
-                    print_string_raw(12, 22, "DISTRIBUTION HALTED CLEANLY VIA SYSTEM CODE", 0x0F);
-
-                    while (true) {
-                        asm volatile("cli; hlt");
-                    }
+                    print_string_raw(11, 15, "ANTAGONIST OS RELEASE RUNWAY CONTROL COMPLETED", ATTR_GOLD);
+                    print_string_raw(12, 22, "DISTRIBUTION HALTED CLEANLY VIA SYSTEM CODE", ATTR_WHITE);
+                    while (true) { asm volatile("cli; hlt"); }
                 }
-
-
             }
         }
 
         uint_to_string_freestanding(workspace_folders[active_directory_index].active_files_count, file_count_string);
 
-        // 2. Render Header Layout
+        // 4. Render Header Layout
         print_string_raw(1, 10, "==================================================", ATTR_GOLD);
         print_string_raw(2, 10, "  ANTAGONIST OS INDEPENDENT FILE-SYSTEM MANAGER    ", ATTR_GOLD);
         print_string_raw(3, 10, "==================================================", ATTR_GOLD);
 
-        // 3. Telemetry Indicators
+        // 5. Telemetry Indicators
         print_string_raw(5, 12, "WORKSPACE STATUS: PERSISTENT TRACK RUNNING", ATTR_WHITE);
         print_string_raw(6, 12, "REAL-TIME TELEMETRY SYSTEM TICKS: ", ATTR_LIGHT_CYAN);
         print_string_raw(6, 46, tick_string, ATTR_MINT_GREEN);
 
         /*
-           4. Render Interactive Directory Navigation Matrices
+           6. Render Interactive Directory Navigation Matrices
         */
-        print_string_raw(9, 10, "--- FILE MATRIX WORKSTATION DIRECTORY NAV ---", ATTR_LIGHT_CYAN);
+        print_string_raw(8, 10, "--- FILE MATRIX WORKSTATION DIRECTORY NAV ---", ATTR_LIGHT_CYAN);
 
-        print_string_raw(11, 12, "ACTIVE DIRECTORY INDEX LINK: ", ATTR_WHITE);
-        print_string_raw(11, 41, "        ", ATTR_WHITE); // Fast wipe buffer
-        print_string_raw(11, 41, workspace_folders[active_directory_index].folder_path, ATTR_MINT_GREEN);
+        print_string_raw(10, 12, "ACTIVE DIRECTORY INDEX LINK: ", ATTR_WHITE);
+        print_string_raw(10, 41, "        ", ATTR_WHITE); // Fast wipe buffer
+        print_string_raw(10, 41, workspace_folders[active_directory_index].folder_path, ATTR_MINT_GREEN);
 
-        print_string_raw(12, 12, "MOUNTED DESCRIPTION METADATA: ", ATTR_WHITE);
-        print_string_raw(12, 42, "                             ", ATTR_WHITE);
-        print_string_raw(12, 42, workspace_folders[active_directory_index].folder_meta_desc, ATTR_LIGHT_CYAN);
+        print_string_raw(11, 12, "MOUNTED DESCRIPTION METADATA: ", ATTR_WHITE);
+        print_string_raw(11, 42, "                             ", ATTR_WHITE);
+        print_string_raw(11, 42, workspace_folders[active_directory_index].folder_meta_desc, ATTR_LIGHT_CYAN);
 
-        print_string_raw(13, 12, "TOTAL TARGET FILENODES FOUND: ", ATTR_WHITE);
-        print_string_raw(13, 42, "    ", ATTR_WHITE);
-        print_string_raw(13, 42, file_count_string, ATTR_GOLD);
+        print_string_raw(12, 12, "TOTAL TARGET FILENODES FOUND: ", ATTR_WHITE);
+        print_string_raw(12, 42, "    ", ATTR_WHITE);
+        print_string_raw(12, 42, file_count_string, ATTR_GOLD);
 
-        // 5. Visual Footer Index Slots
-        print_string_raw(17, 10, "[Press Keys 1-4 to navigate | Press Spacebar to lock state to cells]", ATTR_SLATE_GRAY);
+        /*
+           🔥 LIVE VFAT STORAGE CELL READOUT INTERFACE LATCH 🔥
+           Queries the active folder context entries table layout, rendering file
+           allocations and text characters live on your screen viewports!
+        */
+        print_string_raw(14, 12, "--- LIVE STORAGE CATALOG MATRIX IN DIRECTORY ---", ATTR_SLATE_GRAY);
+
+        // Fast buffer cleanup rows to clear ghost character traces fluidly
+        print_string_raw(15, 12, "                                                            ", ATTR_WHITE);
+        print_string_raw(16, 12, "                                                            ", ATTR_WHITE);
+
+        uint32_t current_folder_files = workspace_folders[active_directory_index].active_files_count;
+        if (current_folder_files == 0) {
+            print_string_raw(15, 14, "[Directory is empty]", ATTR_SLATE_GRAY);
+        } else {
+            for (uint32_t idx = 0; idx < current_folder_files && idx < 2; idx++) {
+                const char* f_name = get_virtual_file_name(idx, active_directory_index);
+                const char* f_cont = get_virtual_file_content(idx, active_directory_index);
+
+                if (f_name && f_cont) {
+                    print_string_raw(15 + idx, 14, f_name, ATTR_MINT_GREEN);
+                    print_string_raw(15 + idx, 28, "-> ", ATTR_WHITE);
+                    print_string_raw(15 + idx, 31, f_cont, ATTR_WHITE);
+                }
+            }
+        }
+
+        // 7. Visual Footer Index Slots
+        print_string_raw(18, 10, "[Keys 1-4: Change Folders | Space: Lock Context | Key 5: Exit System]", ATTR_SLATE_GRAY);
         print_string_raw(19, 10, "==================================================", ATTR_GOLD);
 
-        // 6. Automated safe shutdown checkpoint gate
+        // 8. Automated safe shutdown checkpoint gate
         if (live_distro_ticks >= 5000) {
             for (int i = 0; i < 4000; i += 2) {
                 ((volatile char*)0xB8000)[i] = ' ';
