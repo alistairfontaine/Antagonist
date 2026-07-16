@@ -10,7 +10,9 @@
 // Forward declare the external distribution entry function at global scope
 extern "C" void antagonist_main();
 extern "C" void sys_handler_stub(); // Reference our new assembly vector gateway loop point
+extern "C" void jump_to_ring3(uint32_t entry_point_addr); // Link straight into the assembly iret latch
 void kernel_idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags); // Unique local C++ prototype
+
 
 // Global Scope Hardware Storage Driver Prototypes
 extern "C" void ata_write_sector(uint32_t lba, const uint8_t* buffer);
