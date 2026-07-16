@@ -3,11 +3,12 @@
 #include "buffer.h"
 #include "font.h"
 #include "procedural.h"
+#include "hotbar.h"
 
 /*
    Antagonist OS Distribution Master Initialization Gateway.
-   Direct text-mode video dashboard with integrated real-time
-   procedural terrain generation loop animations.
+   Direct Hardware Port Polling Engine. Bypasses restricted kernel interrupt
+   line blocks to read keyboard controller registers natively in protected mode.
 */
 
 // Standard VGA text mode color attribute flags
@@ -16,6 +17,13 @@
 #define ATTR_WHITE           0x0F
 #define ATTR_MINT_GREEN      0x0A
 #define ATTR_SLATE_GRAY      0x08
+
+/* Low-level port input assembly wrapper to query keyboard data lines directly */
+inline uint8_t inb(uint16_t port) {
+    uint8_t ret;
+    asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
+    return ret;
+}
 
 /*
    Lightweight freestanding string printer.
@@ -59,43 +67,61 @@ static void uint_to_string_freestanding(uint32_t value, char* dest_buffer) {
 extern "C" void antagonist_main() {
     uint32_t live_distro_ticks = 0;
     char tick_string[16];
-
-    // Allocate a flat 400-byte staging grid for our text topography viewport
     char terrain_matrix[400];
+
+    // 1. Initialize our local distribution state structures and inventory fields
+    init_inventory_hotbar();
 
     while (true) {
         live_distro_ticks++;
         uint_to_string_freestanding(live_distro_ticks, tick_string);
 
-        // 1. Render our high-contrast distribution header banners
-        print_string_raw(2, 10, "==================================================", ATTR_GOLD);
-        print_string_raw(3, 10, "  ANTAGONIST OS LIVE WORKSPACE PLATFORM INSTANCE   ", ATTR_GOLD);
-        print_string_raw(4, 10, "==================================================", ATTR_GOLD);
+        /*
+           2. DIRECT HARDWARE CHIP PORT POLLING MATRIX
+              Bypasses standard interrupt blockages by sampling I/O port 0x60 directly.
+              Maps scancodes 0x02, 0x03, 0x04, 0x05 straight to keys 1, 2, 3, 4.
+        */
+        uint8_t live_scancode = inb(0x60);
+        if (live_scancode >= 0x02 && live_scancode <= 0x05) {
+            update_hotbar_selection(live_scancode);
+        }
 
-        // 2. Output real-time system performance telemetry indices
-        print_string_raw(6, 12, "DISTRO STATUS: RUNNING (MONOLITHIC MASTER)", ATTR_WHITE);
-        print_string_raw(7, 12, "REAL-TIME TELEMETRY SYSTEM TICKS: ", ATTR_LIGHT_CYAN);
-        print_string_raw(7, 46, tick_string, ATTR_MINT_GREEN);
+        // 3. Render our high-contrast distribution header banners
+        print_string_raw(1, 10, "==================================================", ATTR_GOLD);
+        print_string_raw(2, 10, "  ANTAGONIST OS LIVE WORKSPACE PLATFORM INSTANCE   ", ATTR_GOLD);
+        print_string_raw(3, 10, "==================================================", ATTR_GOLD);
 
-        // 3. Compute and render our Phase A2 Procedural Terrain Generation Maps
-        print_string_raw(10, 10, "--- PROCEDURAL TOPOLOGY STREAM (PHASE A2) ---", ATTR_LIGHT_CYAN);
+        // 4. Output real-time system performance telemetry indices
+        print_string_raw(5, 12, "DISTRO STATUS: RUNNING (MONOLITHIC MASTER)", ATTR_WHITE);
+        print_string_raw(6, 12, "REAL-TIME TELEMETRY SYSTEM TICKS: ", ATTR_LIGHT_CYAN);
+        print_string_raw(6, 46, tick_string, ATTR_MINT_GREEN);
 
-        // Populate our local array buffer with raw bitwise prime-scramble noise blocks
+        /*
+           5. Render our Phase A3 Inventory Selection Interface Bar!
+        */
+        print_string_raw(8, 12, "CREATIVE HOTBAR SELECTION:", ATTR_WHITE);
+        print_string_raw(9, 12, "ACTIVE COMPONENT VELD: ", ATTR_LIGHT_CYAN);
+
+        // Wipe old material slot labels quickly to ensure crisp variable layout text
+        print_string_raw(9, 35, "              ", ATTR_WHITE);
+        print_string_raw(9, 35, get_active_material_name(), get_active_material_attribute());
+
+        // 6. Compute and render our Phase A2 Procedural Terrain Generation Maps
+        print_string_raw(11, 10, "--- PROCEDURAL TOPOLOGY STREAM (PHASE A2) ---", ATTR_LIGHT_CYAN);
         generate_procedural_topography(live_distro_ticks, terrain_matrix);
 
-        // Rasterize the scrolling procedural map grid line-by-line across rows 12-16
         for (int y = 0; y < 5; y++) {
             char line_temp_buffer[81];
             for (int x = 0; x < 80; x++) {
                 line_temp_buffer[x] = terrain_matrix[(y * 80) + x];
             }
-            line_temp_buffer[80] = '\0'; // Enforce null termination bounds
-            print_string_raw(12 + y, 0, line_temp_buffer, ATTR_SLATE_GRAY);
+            line_temp_buffer[80] = '\0';
+            print_string_raw(13 + y, 0, line_temp_buffer, ATTR_SLATE_GRAY);
         }
 
         print_string_raw(19, 10, "==================================================", ATTR_GOLD);
 
-        // 4. Automated safe shutdown checkpoint simulation gate expanded to 5,000 ticks
+        // 7. Automated safe shutdown checkpoint simulation gate set to 5,000 ticks
         if (live_distro_ticks >= 5000) {
             for (int i = 0; i < 4000; i += 2) {
                 ((volatile char*)0xB8000)[i] = ' ';
@@ -109,7 +135,6 @@ extern "C" void antagonist_main() {
             }
         }
 
-        // Delay execution loops to keep the scrolling fluid and human-readable
         for (volatile uint32_t delay = 0; delay < 1200000; delay++);
     }
 }
