@@ -1,7 +1,16 @@
+; ========================================================================
+; Antagonist Independent Monolithic Bootloader Module (Phase S/W)
+; Captures VESA VBE metrics and registers our master Software Interrupt Gate!
+; Preserves all hardware interrupt stubs, context switch loops, and privilege tracks.
+; ========================================================================
+
 ; Define constants for the Multiboot header alignment matrix
-MAGIC    equ 0x1BADB002
-FLAGS    equ 0x00
-CHECKSUM equ -(MAGIC + FLAGS)
+MBALIGN    equ 1 << 0           ; Align modules on page boundaries
+MEMINFO    equ 1 << 1           ; Provide memory map info flags
+VIDEO_MODE equ 1 << 2          ; Activate GRUB Multiboot video mode parameters flag
+MAGIC      equ 0x1BADB002       ; Identification signature token
+FLAGS      equ MBALIGN | MEMINFO | VIDEO_MODE ; Combined Multiboot tracking mask
+CHECKSUM   equ -(MAGIC + FLAGS) ; Verification parity calculation offset
 
 section .multiboot
 align 4
@@ -9,21 +18,33 @@ align 4
     dd FLAGS
     dd CHECKSUM
 
+    ; Explicit Multiboot Video Mode Field Overrides
+    dd 0    ; Mode type flag: 0 select linear pixel graphics mode
+    dd 800  ; Targeted horizontal resolution width footprint
+    dd 600  ; Targeted vertical resolution height footprint
+    dd 32   ; True Color Bit Depth (32-bit depth = RGBA layout channel packing)
+
 section .text
 global _start
 global isr0_handler_stub
 global irq0_handler_stub
-global irq1_handler_stub ; Expose our brand new keyboard interrupt gate stub label
-global context_switch    ; Expose our raw scheduler stack-swapping engine
+global irq1_handler_stub
+global sys_handler_stub  ; 🔥 EXPOSE OUR NEW INT 0x80 SOFTWARE SYSCALL GATE STUB LABEL!
+global context_switch
 
 extern kernel_main
 extern divide_by_zero_handler
 extern timer_handler
-extern keyboard_handler  ; Reference our external C++ keyboard routine handler
+extern keyboard_handler
+extern syscall_dispatcher ; Reference our centralized C++ distribution hub handler
 
 _start:
     ; Hand over our newly allocated stack boundary pointer to the CPU stack register
     mov esp, stack_top
+
+    ; Push the incoming GRUB multiboot structure magic tokens onto the stack frames
+    push ebx
+    push eax
 
     ; Jump directly into our main freestanding C++ environment kernel loop
     call kernel_main
@@ -36,45 +57,61 @@ halt_loop:
 
 ; This is our raw low-level hardware entry stub for Interrupt 0 (Exception Trap)
 isr0_handler_stub:
-    pusha                    ; Push all general-purpose CPU registers onto the stack to save their state
-    call divide_by_zero_handler ; Jump directly into our C++ error log function
-    popa                     ; Restore all general-purpose CPU registers back to normal state
-    iret                     ; Interrupt Return
+    pusha
+    call divide_by_zero_handler
+    popa
+    iret
 
 ; This is our raw low-level hardware entry stub for Interrupt 32 (System Timer IRQ 0)
 irq0_handler_stub:
-    pusha                    ; Caches general-purpose CPU registers to protect active calculations
-    call timer_handler       ; Jump straight into our live ticking C++ routine block
-    popa                     ; Restores register configurations cleanly
-    iret                     ; Special return command explicitly pops instruction pointer matrices
+    pusha
+    call timer_handler
+
+    ; Direct PIC Master EOI Signal Acknowledgment Command
+    mov al, 0x20
+    out 0x20, al
+
+    popa
+    iret
 
 ; This is our raw low-level hardware entry stub for Interrupt 33 (System Keyboard IRQ 1)
 irq1_handler_stub:
-    pusha                    ; Caches general-purpose CPU registers to protect active calculations
-    call keyboard_handler    ; Jump straight into our live parsing C++ driver block
-    popa                     ; Restores register configurations cleanly
-    iret                     ; Special return command explicitly pops instruction pointer matrices
+    pusha
+    call keyboard_handler
+
+    ; Direct PIC Master EOI Signal Acknowledgment Command
+    mov al, 0x20
+    out 0x20, al
+
+    popa
+    iret
+
+
+; 🔥 THE REVOLUTIONARY INT 0x80 SYSTEM CALL INTERRUPT VECTOR STUB 🔥
+; Intercepts software interrupts, saves user-space registers, and routes
+; system call number commands into our centralized C++ kernel router.
+sys_handler_stub:
+    pusha                    ; Securely cache all user-space CPU registers
+    push esp                 ; Push the current stack pointer frame context as an argument
+    call syscall_dispatcher  ; Jump straight into our C++ distribution router hub function
+    add esp, 4               ; Clean up our pushed argument parameter line
+    popa                     ; Restore user-space registers cleanly to their pristine states
+    iret                     ; Special interrupt return pops context blocks and privilege levels!
 
 ; ------------------------------------------------------------------
-; The Context Switch Engine: context_switch(uint32_t* old_esp_slot, uint32_t new_esp)
-;
-; Implemented as a raw assembly routine (instead of inline asm inside C++)
-; so the compiler cannot inject its own prologue/epilogue stack traffic
-; around our carefully fabricated register frames.
-;
-; On entry the stack holds: [esp] return address, [esp+4] old_esp_slot, [esp+8] new_esp
+; The Context Switch Engine
 ; ------------------------------------------------------------------
 context_switch:
-    mov eax, [esp + 4]   ; eax = pointer to the outgoing task's saved-esp slot
-    mov edx, [esp + 8]   ; edx = the incoming task's parked stack pointer
-    pusha                ; Save all 8 general-purpose registers (32 bytes) of the outgoing task
-    mov [eax], esp       ; Park the outgoing task's stack pointer inside its control block
-    mov esp, edx         ; Mount the incoming task's stack
-    popa                 ; Restore the incoming task's 8 general-purpose registers
-    ret                  ; Resume the incoming task (or enter thread_bootstrap on first run)
+    mov eax, [esp + 4]
+    mov edx, [esp + 8]
+    pusha
+    mov [eax], esp
+    mov esp, edx
+    popa
+    ret
 
 section .bss
 align 16
 stack_bottom:
-    resb 16384 ; Allocate a 16KB uninitialized data area for our temporary system stack pointer
+    resb 16384
 stack_top:
