@@ -10,7 +10,8 @@ LDFLAGS = -m elf_i386 -T kernel/linker.ld
 
 # Completely self-contained local object compilation paths!
 KERNEL_OBJS = kernel/boot.o kernel/kernel.o kernel/gdt.o kernel/idt.o kernel/timer.o kernel/keyboard.o kernel/pmm.o kernel/vmm.o kernel/heap.o kernel/task.o kernel/ata.o
-DISTRO_OBJS = src/main.o src/vbe.o src/buffer.o src/palette.o src/input.o src/math3d.o src/raycast.o src/collision.o src/spatial.o src/selection.o src/particle.o src/modification.o src/tensor.o src/weights.o src/vocab.o src/tokenizer.o src/threads.o src/font.o src/persistence.o src/procedural.o src/hotbar.o
+DISTRO_OBJS = src/main.o src/vbe.o src/buffer.o src/palette.o src/input.o src/math3d.o src/raycast.o src/collision.o src/spatial.o src/selection.o src/particle.o src/modification.o src/tensor.o src/weights.o src/vocab.o src/tokenizer.o src/threads.o src/font.o src/persistence.o src/procedural.o src/hotbar.o src/vfat.o
+
 
 
 
@@ -21,11 +22,16 @@ bin/antagonist.bin: $(KERNEL_OBJS) $(DISTRO_OBJS)
 	mkdir -p bin
 	$(LD) $(LDFLAGS) -o bin/antagonist.bin $(KERNEL_OBJS) $(DISTRO_OBJS)
 
-# Automatically generate a clean 10MB virtual hard drive image with a valid MBR signature
+# Protected Disk Image Rule: Only allocates a raw image if the file is physically absent!
 bin/disk.img:
 	mkdir -p bin
-	dd if=/dev/zero of=bin/disk.img bs=512 count=20480 2>/dev/null
-	printf '\x55\xAA' | dd of=bin/disk.img bs=1 seek=510 conv=notrunc 2>/dev/null
+	@if [ ! -f bin/disk.img ]; then \
+		dd if=/dev/zero of=bin/disk.img bs=512 count=20480 2>/dev/null; \
+		printf '\x55\xAA' | dd of=bin/disk.img bs=1 seek=510 conv=notrunc 2>/dev/null; \
+		echo "⚙️  New raw persistent storage image initialized."; \
+	else \
+		echo "💾  Existing persistent disk image detected. Preserving data sectors..."; \
+	fi
 
 # Raw assembly boot sector rule
 kernel/boot.o: kernel/boot.s
@@ -99,10 +105,17 @@ src/procedural.o: src/procedural.cpp
 src/hotbar.o: src/hotbar.cpp
 	$(CC) $(CFLAGS) src/hotbar.cpp -o src/hotbar.o
 
+src/vfat.o: src/vfat.cpp
+	$(CC) $(CFLAGS) src/vfat.cpp -o src/vfat.o
+
+
 
 # Run Target: Forcefully wakes up an external high-resolution window interface frame!
 run: bin/antagonist.bin bin/disk.img
-	qemu-system-i386 -kernel bin/antagonist.bin -drive file=bin/disk.img,format=raw,index=0,media=disk -vga std -display sdl
+	qemu-system-i386 -kernel bin/antagonist.bin -drive file=bin/disk.img,format=raw,index=2,media=disk,cache=writeback -vga std -display sdl
+
+
 
 clean:
-	rm -f kernel/*.o src/*.o bin/*.bin bin/disk.img
+	rm -f kernel/*.o src/*.o bin/*.bin
+
