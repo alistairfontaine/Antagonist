@@ -116,7 +116,9 @@ src/loader.o: src/loader.cpp
 
 # Run Target: Forcefully wakes up an external high-resolution window interface frame!
 run: bin/antagonist.bin bin/disk.img
-	qemu-system-i386 -kernel bin/antagonist.bin -drive file=bin/disk.img,format=raw,index=2,media=disk,cache=writeback -vga std -display sdl
+	qemu-system-i386 -kernel bin/antagonist.bin -drive file=bin/disk.img,format=raw,index=1,media=disk,cache=writeback -vga std -display sdl
+
+
 
 
 
