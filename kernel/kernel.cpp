@@ -9,10 +9,13 @@
 
 // Forward declare the external distribution entry function at global scope
 extern "C" void antagonist_main();
+extern "C" void sys_handler_stub(); // Reference our new assembly vector gateway loop point
+void kernel_idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags); // Unique local C++ prototype
 
 uint32_t count_alpha = 0;
 
 uint32_t count_beta = 0;
+
 
 /*
    A lightweight, bare-metal string comparison utility.
@@ -113,9 +116,18 @@ extern "C" void kernel_main() {
     /* Step 2: Initialize the Multitasking Scheduler Layer */
     init_multitasking();
 
+    /*
+       🔥 HARDWARE GATE REGISTER INTEGRATION 🔥
+       Inject our assembly software handler into IDT descriptor gate index 0x80.
+       Flags: 0x8E maps a 32-bit Interrupt Gate, and shifting bits tells the CPU
+       that this gate can be executed by user-space applications (Privilege Ring 3)!
+    */
+    kernel_idt_set_gate(0x80, (uint32_t)sys_handler_stub, 0x08, 0xEE);
+
     /* Step 3: Spawn our parallel runtime threads */
     create_thread(task_alpha_routine);
     create_thread(task_beta_routine);
+
 
     /* Start from a pristine screen so firmware boot text cannot bleed into our console */
     clear_screen();
@@ -170,4 +182,67 @@ extern "C" void kernel_main() {
     while (true) {
         asm volatile("hlt");
     }
+}
+
+/* Freestanding port input utility inline assembly wrapper */
+inline uint8_t inb(uint16_t port) {
+    uint8_t ret;
+    asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
+    return ret;
+}
+
+/*
+   Centralized Monolithic Syscall Router Hub Framework.
+   Intercepts user-space command numbers passed inside CPU registers.
+   registers[7] = eax value (Syscall Identifier Number)
+   registers[6] = ebx value (Argument 1 - text buffers / pointer data blocks)
+   registers[5] = ecx value (Argument 2 - target row lanes / column indexes)
+*/
+extern "C" void syscall_dispatcher(uint32_t* registers) {
+    uint32_t syscall_number = registers[7];
+    uint32_t arg1           = registers[6];
+    uint32_t arg2           = registers[5];
+
+    // Syscall 1: System Print String Raw Gateway
+    if (syscall_number == 1) {
+        int row = (int)arg2;
+        const char* text_buffer = (const char*)arg1;
+
+        volatile char* video_mem = (volatile char*)0xB8000;
+        int index = (row * 80 + 10) * 2; // Fixed column alignment center track
+
+        int i = 0;
+        while (text_buffer[i] != '\0') {
+            video_mem[index] = text_buffer[i];
+            video_mem[index + 1] = 0x0E; // Gold text layout style attribute
+            index += 2;
+            i++;
+        }
+    }
+
+    // Syscall 2: Direct Hardware Port Input Query Gateway
+    else if (syscall_number == 2) {
+        uint8_t scancode = inb(0x60);
+
+        // Pass the live scancode byte directly back into user-space via the eax register slot!
+        registers[7] = scancode;
+    }
+}
+
+/*
+   Linker Namespace Interface Bridge.
+   Exposes the un-mangled C signature of idt_set_gate to satisfy the final linker phase
+   and maps it straight to the active internal IDT registration context.
+*/
+/*
+   Linker Namespace Interface Bridge.
+   Maps our localized proxy calls directly into your kernel's true
+   global compiled C++ IDT register manipulation arrays.
+*/
+void kernel_idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
+    // Forward-declare your kernel's global un-namespaced name
+    extern void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags);
+
+    // Pass the parameters straight to the physical descriptor arrays!
+    idt_set_gate(num, base, sel, flags);
 }
