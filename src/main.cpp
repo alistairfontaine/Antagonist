@@ -8,7 +8,8 @@
 /*
    Antagonist OS Distribution Master Initialization Gateway.
    Direct text-mode video dashboard with procedural scrolling landscapes,
-   interactive item hotbar arrays, and dynamic day/night vector color loops.
+   interactive item hotbar arrays, day/night cycles, and dynamic vertex
+   ambient occlusion edge shadow shading passes.
 */
 
 // Standard VGA text mode color attribute flags
@@ -18,6 +19,7 @@
 #define ATTR_MINT_GREEN      0x0A
 #define ATTR_SLATE_GRAY      0x08
 #define ATTR_LIGHT_PURPLE    0x0D
+#define ATTR_DARK_SHADOW     0x07  // Muted low-intensity gray shadow mask
 
 // Low-level port input assembly wrapper to query keyboard data lines directly
 inline uint8_t inb(uint16_t port) {
@@ -85,66 +87,82 @@ extern "C" void antagonist_main() {
             }
         }
 
-        /*
-           3. DYNAMIC DAY/NIGHT ENVIRONMENT INTERPOLATOR (PHASE A4)
-              Calculates a time phase sector based on our active hardware clock ticks.
-              Cycles every 600 ticks through Day, Dusk, Night, and Dawn states.
-        */
+        // 3. Dynamic Day/Night Environment Clock tracking
         uint32_t time_cycle = live_distro_ticks % 600;
         uint8_t environmental_color = ATTR_SLATE_GRAY;
         const char* time_label = "NIGHT";
 
         if (time_cycle < 150) {
-            environmental_color = ATTR_MINT_GREEN; // High-noon brilliant day slate
+            environmental_color = ATTR_MINT_GREEN;
             time_label = "DAY  ";
         } else if (time_cycle >= 150 && time_cycle < 300) {
-            environmental_color = ATTR_GOLD;       // Sunset golden transition phase
+            environmental_color = ATTR_GOLD;
             time_label = "DUSK ";
         } else if (time_cycle >= 300 && time_cycle < 450) {
-            environmental_color = ATTR_SLATE_GRAY; // Deep night mask tone
+            environmental_color = ATTR_SLATE_GRAY;
             time_label = "NIGHT";
         } else {
-            environmental_color = ATTR_LIGHT_PURPLE; // Dawn twilight purple accent
+            environmental_color = ATTR_LIGHT_PURPLE;
             time_label = "DAWN ";
         }
 
-        // 4. Render our high-contrast distribution header banners
+        // 4. Render Layout Headers
         print_string_raw(1, 10, "==================================================", ATTR_GOLD);
         print_string_raw(2, 10, "  ANTAGONIST OS LIVE WORKSPACE PLATFORM INSTANCE   ", ATTR_GOLD);
         print_string_raw(3, 10, "==================================================", ATTR_GOLD);
 
-        // 5. Output real-time system performance telemetry indices
+        // 5. Performance Telemetry readouts
         print_string_raw(5, 12, "DISTRO STATUS: RUNNING (MONOLITHIC MASTER)", ATTR_WHITE);
         print_string_raw(6, 12, "REAL-TIME TELEMETRY SYSTEM TICKS: ", ATTR_LIGHT_CYAN);
         print_string_raw(6, 46, tick_string, ATTR_MINT_GREEN);
-
-        // Output our active day/night cycle engine telemetry text character states
         print_string_raw(7, 12, "ENVIRONMENT ENVIRONMENT MATRIX INDEX: ", ATTR_LIGHT_CYAN);
         print_string_raw(7, 50, time_label, environmental_color);
 
-        // 6. Render our Phase A3 Inventory Selection Interface Bar
+        // 6. Inventory Selection hotbar line
         print_string_raw(9, 12, "CREATIVE HOTBAR SELECTION:", ATTR_WHITE);
         print_string_raw(10, 12, "ACTIVE COMPONENT VELD: ", ATTR_LIGHT_CYAN);
         print_string_raw(10, 35, "              ", ATTR_WHITE);
         print_string_raw(10, 35, get_active_material_name(), get_active_material_attribute());
 
-        // 7. Compute and render our Phase A2 Procedural Terrain Generation Maps
+        // 7. Compute and render our Phase A2/A1 Procedural Terrain Generation Maps
         print_string_raw(12, 10, "--- PROCEDURAL TOPOLOGY STREAM (PHASE A2) ---", ATTR_LIGHT_CYAN);
         generate_procedural_topography(live_distro_ticks, terrain_matrix);
 
-        // Rasterize the scrolling landscape lines utilizing our live dynamic environmental color!
+        // Rasterize the scrolling landscape lines utilizing our live dynamic ambient occlusion vertex shader pass!
         for (int y = 0; y < 5; y++) {
             char line_temp_buffer[81];
+            volatile char* text_video_memory = (volatile char*)0xB8000;
+            int screen_video_index = ((14 + y) * 80) * 2;
+
             for (int x = 0; x < 80; x++) {
-                line_temp_buffer[x] = terrain_matrix[(y * 80) + x];
+                int matrix_idx = (y * 80) + x;
+                char current_char = terrain_matrix[matrix_idx];
+
+                /*
+                   🔥 PHASE A1: VERTEX AMBIENT OCCLUSION PASS 🔥
+                   Scan horizontal neighbors. If an architectural land asset edge meets an open empty space (' '),
+                   we intercept the pixel rendering pipelines to apply a deep corner edge shadow tracking mask code!
+                */
+                uint8_t pixel_shaded_color = environmental_color;
+                if (current_char == '#' || current_char == '*') {
+                    bool left_is_air  = (x > 0)  && (terrain_matrix[matrix_idx - 1] == ' ');
+                    bool right_is_air = (x < 79) && (terrain_matrix[matrix_idx + 1] == ' ');
+
+                    if (left_is_air || right_is_air) {
+                        pixel_shaded_color = ATTR_DARK_SHADOW; // Apply procedural occlusion shadow step
+                    }
+                }
+
+                // Poke the character and shaded color byte natively into text frame segments
+                text_video_memory[screen_video_index] = current_char;
+                text_video_memory[screen_video_index + 1] = pixel_shaded_color;
+                screen_video_index += 2;
             }
-            line_temp_buffer[80] = '\0';
-            print_string_raw(14 + y, 0, line_temp_buffer, environmental_color);
         }
 
         print_string_raw(20, 10, "==================================================", ATTR_GOLD);
 
-        // 8. Automated safe shutdown checkpoint simulation gate set to 5,000 ticks
+        // 8. Automated safe shutdown checkpoint simulation gate
         if (live_distro_ticks >= 5000) {
             for (int i = 0; i < 4000; i += 2) {
                 ((volatile char*)0xB8000)[i] = ' ';
