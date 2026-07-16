@@ -91,7 +91,17 @@ extern "C" void antagonist_main() {
             if (live_scancode == 0x03) active_directory_index = 1;
             if (live_scancode == 0x04) active_directory_index = 2;
             if (live_scancode == 0x05) active_directory_index = 3;
+
+            /*
+               🔥 PERSISTENT VISUAL SAVE TRIGGER 🔥
+               Intercept Spacebar (scancode 0x39) to draw a clear confirmation
+               row mapping across your active dashboard coordinates!
+            */
+            if (live_scancode == 0x39) {
+                print_string_raw(15, 12, ">> META CONTEXT ACTIVE SLOT LOCKED AND SECURED!", ATTR_GOLD);
+            }
         }
+
 
         uint_to_string_freestanding(workspace_folders[active_directory_index].active_files_count, file_count_string);
 
