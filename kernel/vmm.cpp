@@ -8,6 +8,10 @@
 uint32_t page_directory[1024] __attribute__((aligned(4096)));
 uint32_t first_page_table[1024] __attribute__((aligned(4096)));
 
+/* 🔥 PHASE C2: ISOLATED USER-SPACE PAGES STRUCTURES ALLOCATION 🔥 */
+uint32_t user_page_directory[1024] __attribute__((aligned(4096)));
+uint32_t user_page_table[1024] __attribute__((aligned(4096)));
+
 void init_vmm() {
     // 1. Initialize all Page Directory lines as non-present (clear all entries to 0)
     for (int i = 0; i < 1024; i++) {
@@ -40,6 +44,29 @@ void init_vmm() {
     page_directory[0] = ((uint32_t)first_page_table) | 0x03;
 
     /*
+       🔥 PHASE C2: CONFIGURE THE DUAL-DIRECTORY ISOLATION MAP MATRIX 🔥
+       1. Zero out and clear all 1,024 user page directory tracking slots.
+    */
+    for (int i = 0; i < 1024; i++) {
+        user_page_directory[i] = 0x02; // Mark as Read-Write but Not-Present initially
+    }
+
+    /*
+       2. Populate our User-Space Page Table to map the execution zones.
+          0x07 = Present, Read-Write, and User-Accessible (Ring 3 Permission bitmask).
+    */
+    for (uint32_t i = 0; i < 1024; i++) {
+        uint32_t user_physical_address = i * 4096;
+        user_page_table[i] = user_physical_address | 0x07;
+    }
+
+    /*
+       3. Anchor the User Page Table into the first slot of our User Page Directory.
+          0x07 flag enables the hardware translation unit to read it during user execution loops.
+    */
+    user_page_directory[0] = ((uint32_t)user_page_table) | 0x07;
+
+    /*
        4. Arm the CPU Hardware Registers via Inline Assembly.
        - We move the physical memory location of our page directory array into CR3.
        - We read the CR0 configuration register, flip the highest bit (Bit 31 - Paging Enable),
@@ -53,3 +80,4 @@ void init_vmm() {
         : : "r"(page_directory) : "eax"
     );
 }
+
