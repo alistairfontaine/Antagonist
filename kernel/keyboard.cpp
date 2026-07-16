@@ -34,6 +34,14 @@ volatile uint8_t command_ready_flag = 0;
 // Fixed Buffer Allocation: Explicit global allocation container with 4-byte tracking alignment bounds
 uint8_t disk_test_pad[512] __attribute__((aligned(4)));
 
+/*
+   The Master Keyboard State Matrix Array (Phase G/A3).
+   Tracks the live up/down states of all 256 hardware scancodes.
+   0 = Key Released / Idle, 1 = Key Held Down Natively.
+*/
+extern "C" uint8_t keyboard_matrix[256] = {0};
+
+
 /* US Keyboard Map Index */
 const char kbd_us[128] = {
     0,  27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b',
@@ -142,16 +150,28 @@ extern "C" void keyboard_handler() {
     uint8_t scancode = inb(0x60);
 
     /*
-       Fixed Scancode Gate:
-       If the scancode has bit 7 set, it is a key RELEASE (Break Code).
-       We return immediately and completely ignore it so it cannot double-trigger our loops!
+       🔥 HARDWARE STATE INTERCEPTOR PASS 🔥
+       If bit 7 is hot (0x80), it marks a Key Release event (break code).
+       Otherwise, it tracks an active Key Press event (make code).
     */
     if (scancode & 0x80) {
-        outb(0x20, 0x20); // Acknowledge interrupt to hardware PIC
+        // Clear the key held state index (mask out the high bit to get true scancode)
+        keyboard_matrix[scancode & 0x7F] = 0;
+
+        // Acknowledge interrupt to hardware PIC and return safely
+        outb(0x20, 0x20);
         return;
+    } else {
+        // Flag this scancode matrix slot index as actively pressed/held down!
+        keyboard_matrix[scancode] = 1;
+
+        // Clear the hardware line immediately to prevent interrupt throttling!
+        outb(0x20, 0x20);
     }
 
     char character = kbd_us[scancode];
+
+
 
     if (character == '\n') {
         cmd_buffer[cmd_index] = '\0';
