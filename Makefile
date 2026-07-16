@@ -10,7 +10,8 @@ LDFLAGS = -m elf_i386 -T kernel/linker.ld
 
 # Completely self-contained local object compilation paths!
 KERNEL_OBJS = kernel/boot.o kernel/kernel.o kernel/gdt.o kernel/idt.o kernel/timer.o kernel/keyboard.o kernel/pmm.o kernel/vmm.o kernel/heap.o kernel/task.o kernel/ata.o
-DISTRO_OBJS = src/main.o src/vbe.o src/buffer.o src/palette.o src/input.o src/math3d.o src/raycast.o src/collision.o src/spatial.o src/selection.o src/particle.o src/modification.o src/tensor.o src/weights.o src/vocab.o src/tokenizer.o src/threads.o src/font.o src/persistence.o
+DISTRO_OBJS = src/main.o src/vbe.o src/buffer.o src/palette.o src/input.o src/math3d.o src/raycast.o src/collision.o src/spatial.o src/selection.o src/particle.o src/modification.o src/tensor.o src/weights.o src/vocab.o src/tokenizer.o src/threads.o src/font.o src/persistence.o src/procedural.o
+
 
 all: bin/antagonist.bin bin/disk.img
 
@@ -90,6 +91,9 @@ src/font.o: src/font.cpp
 
 src/persistence.o: src/persistence.cpp
 	$(CC) $(CFLAGS) src/persistence.cpp -o src/persistence.o
+
+src/procedural.o: src/procedural.cpp
+	$(CC) $(CFLAGS) src/procedural.cpp -o src/procedural.o
 
 # Run Target: Forcefully wakes up an external high-resolution window interface frame!
 run: bin/antagonist.bin bin/disk.img
