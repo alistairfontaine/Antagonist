@@ -82,9 +82,26 @@ static void clear_screen() {
 }
 
 extern "C" void kernel_main() {
+    /* 🔥 COPROCESSOR REALIGNMENT PASS 🔥
+       Enable the physical x86 Floating Point Unit (FPU) natively on the silicon
+       to completely shield our 3D software rendering loops from triple faults!
+    */
+    asm volatile (
+        "fninit\n\t"
+        "mov %%cr0, %%eax\n\t"
+        "and $0xFFFFFFFB, %%eax\n\t"  // Clear EM (Emulation) flag
+        "or $0x00000022, %%eax\n\t"   // Set MP (Monitor Coprocessor) and NE (Numeric Error)
+        "mov %%eax, %%cr0\n\t"
+        "mov %%cr4, %%eax\n\t"
+        "or $0x00000600, %%eax\n\t"   // Set OSFXSR and OSXMMEXCPT for modern compiler math
+        "mov %%eax, %%cr4\n\t"
+        : : : "eax"
+    );
+
     /* Step 1: Initialize the Core System Engine Segments */
     init_gdt();
     init_idt();
+
     init_timer(100);
     init_pmm(64 * 1024 * 1024);
     init_vmm();
