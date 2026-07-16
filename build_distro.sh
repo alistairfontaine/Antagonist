@@ -2,18 +2,16 @@
 set -e
 
 echo "========================================================================"
-echo "🚀 INITIATING ANTAGONIST INDEPENDENT MONOLITHIC BUILD PIPELINE..."
+echo "🚀 INITIATING ANTAGONIST FILE-SYSTEM WORKSTATION LOOPS..."
 echo "========================================================================"
 
-# Clean local objects to avoid linking conflicts
+# Clean and recompile our self-contained workspace object packages
 make clean
-
-# Compile the complete, self-contained local workspace package tree
 make all
 
 echo "========================================================================"
-echo "✅ SELF-CONTAINED DISTRO COMPILED! LAUNCHING EMULATOR HARNESS..."
+echo "✅ WORKSPACE SYSTEM TARGET COMPILED! LAUNCHING WORKSTATION HARNESS..."
 echo "========================================================================"
 
-# Boot the platform inside QEMU standard UI panel windows
+# Launch our workstation directly using our stable, verified loader flag
 make run
