@@ -218,8 +218,8 @@ extern "C" void antagonist_main() {
         print_string_raw(19, 37, status_string, ATTR_GOLD);
 
         print_string_raw(20, 12, "LIVE TRACK REGISTER: ", ATTR_WHITE);
-        print_string_raw(20, 33, "                                                 ", ATTR_WHITE);
-        print_string_raw(20, 33, active_exec_log, ATTR_LIGHT_CYAN);
+        print_string_raw(20, 23, "                                                         ", ATTR_WHITE); // Bounded clear buffer
+        print_string_raw(20, 23, active_exec_log, ATTR_LIGHT_CYAN);
 
         // 7. Visual Footer Index Slots
 
