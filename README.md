@@ -6,8 +6,7 @@
 
 Antagonist is an advanced, bare-metal, neural-interactive operating system distribution built entirely from the silicon up. Hosted on a self-contained, locally integrated `FontaineOS` micro-kernel core, it integrates a hardware-independent 3D voxel engine (`MontaigneEngine`) and a native background neural tensor network language engine (`Fontana`) into a unified, completely standalone computing platform with zero underlying host OS dependencies.
 
-> 📖 **Engineering Note:** For an open, in-depth breakdown detailing the technical pivot from an unaccelerated 3D software rasterizer to a robust system-call file workstation, read the official [ENLIGHTENMENT.md](ENLIGHTENMENT.md) documentation layout sheet.
-
+> 📖 **Engineering Note:** For an open, in-depth breakdown detailing the technical pivot from an unaccelerated 3D software rasterizer to a robust system-call file workstation, read the official [ENLIGHTENMENT.md](docs/ENLIGHTENMENT.md) documentation layout sheet.
 ---
 
 ## 🔧 Distribution Core Principles
