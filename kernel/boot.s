@@ -31,6 +31,8 @@ global irq0_handler_stub
 global irq1_handler_stub
 global sys_handler_stub  ; 🔥 EXPOSE OUR NEW INT 0x80 SOFTWARE SYSCALL GATE STUB LABEL!
 global context_switch
+global jump_to_ring3     ; 🔥 EXPOSE OUR NEW RING PRIVILEGE TRANSITION ROUTINE!
+
 
 extern kernel_main
 extern divide_by_zero_handler
@@ -109,6 +111,37 @@ context_switch:
     mov esp, edx
     popa
     ret
+
+; ------------------------------------------------------------------
+; 🔥 PHASE C3: ASSEMBLY-INSULATED RING 0 TO RING 3 HANDOFF STUB 🔥
+; ------------------------------------------------------------------
+jump_to_ring3:
+    ; Disable interrupts temporarily while we manipulate the privilege frames
+    cli
+
+    ; Allocate a local User-Space application Stack Frame register target
+    mov ax, 0x23             ; User Data Segment Selector (Gate 4 offset + Ring 3 privilege flags)
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    ; Craft the fake Intel hardware Interrupt Return frame block on the stack
+    push 0x23                ; SS: Push User Data Segment Selector
+    push 0x000E0000          ; ESP: Assign a safe, isolated high-memory user stack pointer address
+
+    ; Push EFLAGS: Re-enable interrupts natively in user-space (0x200 = IF bit high)
+    push 0x202
+
+    push 0x1B                ; CS: Push User Code Segment Selector (Gate 3 offset + Ring 3 privilege flags)
+
+    ; Push EIP: Target the memory address pointer of antagonist_main passed from C++
+    mov eax, [esp + 24]      ; Extract the function target argument from the calling stack frame
+    push eax
+
+    ; Execute the absolute bare-metal hardware privilege degradation sequence!
+    iret                     ; Pops parameters, drops privilege to Ring 3, and jumps to antagonist_main!
+
 
 section .bss
 align 16
