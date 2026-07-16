@@ -36,6 +36,21 @@ inline uint8_t inb(uint16_t port) {
     return ret;
 }
 
+/* User-Space Syscall 2: Keyboard Port Query Assembly Wrapper */
+static uint8_t sys_query_keyboard() {
+    uint32_t scancode_return;
+    asm volatile (
+        "movl $2, %%eax\n\t"    // Syscall ID 2 (Read Keyboard)
+        "int $0x80\n\t"         // Trigger software interrupt privilege switch
+        "movl %%eax, %0\n\t"    // Extract returned scancode out of EAX
+        : "=g"(scancode_return)
+        :
+        : "eax"
+    );
+    return (uint8_t)scancode_return;
+}
+
+
 
 /* Lightweight freestanding string printer */
 static void print_string_raw(int row, int col, const char* str, uint8_t attribute) {
@@ -107,10 +122,11 @@ extern "C" void antagonist_main() {
 
         /*
            3. Edge-Triggered Keyboard Port Debouncer Matrix (Phase B1)
+              Upgraded to use Syscall 2 wrappers to insulate user-space execution.
               Key '1' = /root, Key '2' = /sys, Key '3' = /bin, Key '4' = /user
         */
         static uint8_t last_scancode = 0;
-        uint8_t live_scancode = inb(0x60);
+        uint8_t live_scancode = sys_query_keyboard();
 
         if (live_scancode != last_scancode) {
             last_scancode = live_scancode;
