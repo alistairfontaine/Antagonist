@@ -40,6 +40,18 @@ extern "C" void evaluate_tensor_forward(const uint32_t* input_tokens, float* out
     }
 
     /*
+       Reset the output layer to a clean zero baseline before accumulating.
+       A forward pass must be a pure function of its input context: without this
+       reset the static layer keeps summing across every call, so repeated
+       evaluations of the same context return ever-growing values that saturate
+       to +inf and freeze the argmax. (This loop is driven every scheduler tick
+       by cognitive_engine_thread_loop, so the overflow happens within seconds.)
+    */
+    for (int i = 0; i < FONTANA_VOCAB_SIZE; i++) {
+        static_output_layer[i] = 0.0f;
+    }
+
+    /*
        Low-level matrix dot-product emulation layer.
        Loops over the context tokens, matches them against embedding matrices,
        and updates the output layer arrays with standard raw float values.
